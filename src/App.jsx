@@ -15,6 +15,7 @@ import Icon from './components/Icon.jsx'
 import InstallBanner from './components/InstallBanner.jsx'
 import Slideshow from './components/Slideshow.jsx'
 import WishPanel from './components/WishPanel.jsx'
+import SouvenirModal from './components/SouvenirModal.jsx'
 import { todayIso } from './lib/format.js'
 import { anniversarySeen, findAnniversary, markAnniversarySeen } from './lib/souvenir.js'
 
@@ -42,6 +43,7 @@ export default function App() {
   const [myPosition, setMyPosition] = useState(null)
   const [activeTag, setActiveTag] = useState(null)
   const [slideshow, setSlideshow] = useState(false)
+  const [souvenirFor, setSouvenirFor] = useState(null) // voyage (avec les champs en cours d'édition)
   const [souvenirHidden, setSouvenirHidden] = useState(anniversarySeen)
 
   const selected = carnet.trips.find((t) => t.id === selectedId)
@@ -329,6 +331,7 @@ export default function App() {
           onStopsChange={(stops) => carnet.updateTrip(selected.id, { stops })}
           onAddStop={handleAddStop}
           onSlideshow={() => setSlideshow(true)}
+          onSouvenir={(draft) => setSouvenirFor({ ...selected, ...draft })}
           onDelete={async () => {
             await carnet.removeTrip(selected.id)
             setSelectedId(null)
@@ -358,6 +361,19 @@ export default function App() {
           onDelete={async (id) => {
             setPhotoId(null)
             await carnet.removePhoto(id)
+          }}
+        />
+      )}
+
+      {souvenirFor && (
+        <SouvenirModal
+          trip={souvenirFor}
+          number={numbers[souvenirFor.id]}
+          photos={tripPhotos}
+          onClose={() => setSouvenirFor(null)}
+          onDone={() => {
+            setSouvenirFor(null)
+            setToast('Image souvenir prête.')
           }}
         />
       )}

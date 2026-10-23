@@ -45,11 +45,11 @@ export const installDismissed = () => Date.now() - read(KEY_INSTALL) < 7 * DAY
 export const dismissInstall = () => write(KEY_INSTALL, Date.now())
 
 // Sur téléphone : menu Partager (Fichiers, Drive…). Sinon : téléchargement classique.
-export async function saveFile(blob, name) {
+export async function saveFile(blob, name, title = 'Sauvegarde Carnet de Route') {
   const file = new File([blob], name, { type: blob.type })
   if (navigator.canShare?.({ files: [file] })) {
     try {
-      await navigator.share({ files: [file], title: 'Sauvegarde Carnet de Route' })
+      await navigator.share({ files: [file], title })
       return true
     } catch (e) {
       if (e.name === 'AbortError') return false

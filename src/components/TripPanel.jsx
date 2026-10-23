@@ -15,7 +15,7 @@ const pick = (trip) => Object.fromEntries(FIELDS.map((f) => [f, trip[f]]))
  * Tous les champs sont modifiables directement et enregistrés automatiquement.
  * Monté avec key={trip.id} : le brouillon repart de zéro à chaque voyage.
  */
-export default function TripPanel({ trip, number, photos, knownTags, onUpdate, onStopsChange, onAddStop, onSlideshow, onDelete, onClose, onAddPhotos, onOpenPhoto }) {
+export default function TripPanel({ trip, number, photos, knownTags, onUpdate, onStopsChange, onAddStop, onSlideshow, onSouvenir, onDelete, onClose, onAddPhotos, onOpenPhoto }) {
   // Brouillon des seuls champs modifiés ici ; onUpdate(champs) les fusionne dans le voyage.
   const [draft, setDraft] = useState(() => pick(trip))
   const [busy, setBusy] = useState(false)
@@ -130,6 +130,9 @@ export default function TripPanel({ trip, number, photos, knownTags, onUpdate, o
               <Icon name="star" size={22} filled={n <= (draft.rating ?? 0)} />
             </button>
           ))}
+          <button onClick={() => onSouvenir(draft)} className="puce ml-auto text-bleu">
+            <Icon name="image" size={14} /> Image souvenir
+          </button>
         </div>
 
         <div className="mt-6 grid grid-cols-2 gap-3">
