@@ -5,6 +5,7 @@ import PhotoGrid from './PhotoGrid.jsx'
 import { TagEditor } from './Tags.jsx'
 import Stops from './Stops.jsx'
 import Journal from './Journal.jsx'
+import Share from './Share.jsx'
 
 const SAVE_DELAY = 500
 const FIELDS = ['title', 'startDate', 'endDate', 'notes', 'tags', 'entries', 'rating', 'favorite']
@@ -15,7 +16,7 @@ const pick = (trip) => Object.fromEntries(FIELDS.map((f) => [f, trip[f]]))
  * Tous les champs sont modifiables directement et enregistrés automatiquement.
  * Monté avec key={trip.id} : le brouillon repart de zéro à chaque voyage.
  */
-export default function TripPanel({ trip, number, photos, knownTags, onUpdate, onStopsChange, onAddStop, onSlideshow, onSouvenir, onDelete, onClose, onAddPhotos, onOpenPhoto }) {
+export default function TripPanel({ trip, number, photos, knownTags, user, onShare, onUpdate, onStopsChange, onAddStop, onSlideshow, onSouvenir, onDelete, onClose, onAddPhotos, onOpenPhoto }) {
   // Brouillon des seuls champs modifiés ici ; onUpdate(champs) les fusionne dans le voyage.
   const [draft, setDraft] = useState(() => pick(trip))
   const [busy, setBusy] = useState(false)
@@ -186,13 +187,15 @@ export default function TripPanel({ trip, number, photos, knownTags, onUpdate, o
         </div>
         <PhotoGrid photos={photos} coverId={cover?.id} onOpen={onOpenPhoto} />
 
-        <button
-          onClick={confirmDelete}
-          className="mt-8 flex items-center gap-1 text-sm text-encre-muette hover:text-encre"
-        >
-          <Icon name="trash" size={16} />
-          Supprimer ce voyage
-        </button>
+        {user && <Share trip={trip} user={user} onChange={onShare} />}
+
+        {/* Seul le propriétaire supprime un voyage partagé */}
+        {(!user || !trip.owner || trip.owner === user.uid) && (
+          <button onClick={confirmDelete} className="mt-8 flex items-center gap-1 text-sm text-encre-muette hover:text-encre">
+            <Icon name="trash" size={16} />
+            Supprimer ce voyage
+          </button>
+        )}
       </div>
     </aside>
   )

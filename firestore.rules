@@ -1,0 +1,40 @@
+rules_version = '2';
+
+// Règles de sécurité Firestore du Carnet de Route.
+// À coller dans la console Firebase : Firestore Database → Règles → Publier.
+// - Un voyage n'est visible que par les adresses de sa liste « access ».
+// - Seul le propriétaire (owner) modifie cette liste ou supprime le voyage.
+// - Les membres peuvent modifier le voyage (journal, notes…) et ajouter des photos.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+    function me() {
+      return request.auth.token.email.lower();
+    }
+
+    match /trips/{tripId} {
+      allow read: if signedIn() && me() in resource.data.access;
+      allow create: if signedIn()
+        && request.resource.data.owner == request.auth.uid
+        && me() in request.resource.data.access;
+      allow update: if signedIn()
+        && me() in resource.data.access
+        && request.resource.data.owner == resource.data.owner
+        && (request.auth.uid == resource.data.owner || request.resource.data.access == resource.data.access);
+      allow delete: if signedIn() && request.auth.uid == resource.data.owner;
+    }
+
+    match /photos/{photoId} {
+      function trip(id) {
+        return get(/databases/$(database)/documents/trips/$(id)).data;
+      }
+      allow read: if signedIn() && me() in resource.data.access;
+      allow create, update: if signedIn()
+        && me() in trip(request.resource.data.tripId).access
+        && request.resource.data.access == trip(request.resource.data.tripId).access;
+      allow delete: if signedIn() && me() in resource.data.access;
+    }
+  }
+}

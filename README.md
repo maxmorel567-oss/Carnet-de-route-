@@ -57,50 +57,24 @@ Pour l'instant, **dans le navigateur de chaque appareil** (IndexedDB). Rien n'es
 - Pour transférer, ou simplement sauvegarder : *Menu → Exporter* crée un fichier `.json` avec toutes les photos. *Importer* le recharge ailleurs. L'import fusionne : un voyage déjà présent est mis à jour, les autres sont ajoutés.
 - **Fais un export de temps en temps.** Vider les données du site dans le navigateur efface le carnet.
 
-## 4. Étape 2 : synchronisation avec Supabase
+## 4. Synchro et partage (Firebase, gratuit)
 
-Tout le code passe par `src/data/store.js`. Pour synchroniser PC et téléphone, il suffit d'écrire `src/data/supabase.js` avec les mêmes fonctions que `src/data/indexeddb.js`, puis de changer une ligne dans `store.js`.
+Le code est prêt (`src/sync/`) : il s'active dès que la configuration Firebase est renseignée. Sans elle, l'app reste 100 % locale.
 
-1. Crée un compte sur https://supabase.com (offre gratuite : base de données de 500 Mo et 1 Go de fichiers).
-2. *New project*. Dans *Project Settings → API*, note l'**URL** et la clé **anon public**. La clé `anon` est faite pour être dans le navigateur : la sécurité vient des règles RLS ci-dessous.
-3. *Authentication → Providers* : active **Email** (connexion par lien magique), puis désactive les inscriptions publiques une fois ton compte créé.
-4. *Storage* : crée un bucket **privé** nommé `photos`.
-5. *SQL Editor*, exécute :
+**Ce que ça apporte :** connexion avec Google, mêmes voyages sur le téléphone et le PC (hors-ligne compris), partage d'un voyage avec l'adresse Gmail d'un proche (il voit le voyage, ajoute ses photos et son journal ; seul le propriétaire gère le partage et peut supprimer).
 
-```sql
-create table trips (
-  id text primary key,
-  user_id uuid not null default auth.uid() references auth.users,
-  title text, start_date text, end_date text, notes text,
-  place jsonb not null,
-  created_at bigint, updated_at bigint
-);
-create table photos (
-  id text primary key,
-  user_id uuid not null default auth.uid() references auth.users,
-  trip_id text not null references trips on delete cascade,
-  lat double precision, lng double precision, gps_source text,
-  taken_at bigint, created_at bigint
-);
-alter table trips enable row level security;
-alter table photos enable row level security;
-create policy "mes voyages" on trips for all using (user_id = auth.uid());
-create policy "mes photos" on photos for all using (user_id = auth.uid());
-create policy "mes fichiers" on storage.objects for all
-  using (bucket_id = 'photos' and owner = auth.uid());
-```
+**Mise en place (≈ 5 min, sur https://console.firebase.google.com) :**
+1. « Créer un projet » → nom `carnet-de-route` → Google Analytics désactivé → Créer.
+2. Créer → **Authentication** → Commencer → **Google** → Activer → email d'assistance → Enregistrer.
+3. Authentication → **Paramètres** → Domaines autorisés → ajouter `maxmorel567-oss.github.io`.
+4. Créer → **Firestore Database** → Créer une base → emplacement Europe (`europe-west9`, Paris) → mode production.
+5. Firestore → onglet **Règles** → remplacer tout par le contenu de [`firestore.rules`](firestore.rules) → **Publier**.
+6. Paramètres du projet → Vos applications → **`</>`** (Web) → nom « Carnet » → copier le bloc `firebaseConfig`.
+7. Coller ce bloc dans `src/sync/config.js` à la place de `null` (`export const FIREBASE_CONFIG = { … }`), puis pousser sur `main` : la publication se fait toute seule.
 
-6. `npm install @supabase/supabase-js`, et crée un fichier `.env.local` (jamais commité) :
+Offre gratuite Spark, sans carte bancaire : 1 Go de base de données. Les photos y sont stockées compressées (≈ 2 500 photos), car Cloud Storage demande désormais le forfait payant.
 
-```
-VITE_SUPABASE_URL=https://xxxx.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJ...
-```
-
-7. Dans `supabase.js`, chaque fonction lit ou écrit les tables, et les images vont dans le bucket (`photos/{id}.jpg` et `photos/{id}-thumb.jpg`). Ajoute un écran de connexion par email.
-8. Ajoute les deux variables dans Vercel (*Settings → Environment Variables*), exporte tes données locales, puis importe-les une fois connecté.
-
-> Cette étape peut être faite ensemble plus tard : la structure est prête.
+**Tests :** la synchro, le partage et les règles de sécurité ont été vérifiés avec les émulateurs Firebase (`firebase emulators:start --only auth,firestore`) en construisant l'app avec `VITE_FIREBASE_TEST_CONFIG` (jamais utilisé en production).
 
 ## Structure
 
@@ -117,7 +91,8 @@ carnet-de-route/
     ├── index.css           # charte « Établi » (couleurs, polices, carte)
     ├── data/
     │   ├── store.js        # point d'entrée unique des données + export/import
-    │   └── indexeddb.js    # stockage local (à remplacer par Supabase)
+    │   └── indexeddb.js    # stockage local (source de l'écran, hors-ligne)
+    ├── sync/               # connexion Google, synchro Firestore, partage (inactif sans config)
     ├── hooks/useCarnet.js  # voyages, photos, actions
     ├── lib/
     │   ├── image.js        # compression + lecture GPS (EXIF)

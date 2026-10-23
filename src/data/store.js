@@ -1,10 +1,24 @@
-// Point d'entrée unique pour les données.
-// Pour passer à Supabase plus tard : écrire data/supabase.js avec les mêmes
-// fonctions et changer uniquement l'import ci-dessous (voir README).
+// Point d'entrée unique pour les données locales (IndexedDB).
+// Chaque modification locale prévient les abonnés (la synchro Firebase, si elle est active).
 import * as backend from './indexeddb.js'
 import { blobToDataUrl, dataUrlToBlob } from '../lib/image.js'
 
-export const { listTrips, saveTrip, deleteTrip, listPhotos, savePhoto, deletePhoto } = backend
+const listeners = new Set()
+export const onLocalChange = (fn) => {
+  listeners.add(fn)
+  return () => listeners.delete(fn)
+}
+const notify = (fn) => async (...args) => {
+  const result = await fn(...args)
+  listeners.forEach((l) => l())
+  return result
+}
+
+export const { listTrips, listPhotos, putTripRaw, putPhotoRaw, listDeleted, clearDeleted } = backend
+export const saveTrip = notify(backend.saveTrip)
+export const savePhoto = notify(backend.savePhoto)
+export const deleteTrip = notify(backend.deleteTrip)
+export const deletePhoto = notify(backend.deletePhoto)
 
 const FORMAT = 'carnet-de-route'
 
@@ -35,5 +49,6 @@ export async function importAll(data) {
   for (const { image, thumb, ...meta } of data.photos) {
     await backend.savePhoto({ ...meta, blob: await dataUrlToBlob(image), thumb: await dataUrlToBlob(thumb) })
   }
+  listeners.forEach((l) => l())
   return { trips: data.trips.length, photos: data.photos.length }
 }

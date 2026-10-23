@@ -14,7 +14,9 @@ const MONTH_SHORT = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 
 // Menu latéral : catalogue textuel des voyages + sauvegarde.
 const countryNames = new Intl.DisplayNames(['fr'], { type: 'region' })
 
-export default function Catalog({ trips, wishes = [], photos, numbers, tags, visited = [], activeTag, onTag, needsBackup, onSelect, onClose, onExport, onImport }) {
+const SYNC_STATUS = { sync: 'Synchronisation…', ok: 'Synchronisé', error: 'Synchro en erreur, nouvel essai au prochain changement', off: '' }
+
+export default function Catalog({ trips, wishes = [], photos, numbers, tags, visited = [], activeTag, onTag, needsBackup, sync, onSelect, onClose, onExport, onImport }) {
   const [filter, setFilter] = useState('')
   const [view, setView] = useState('liste') // 'liste' | 'frise' | 'souhaits' | 'stats'
   const [favOnly, setFavOnly] = useState(false)
@@ -70,6 +72,9 @@ export default function Catalog({ trips, wishes = [], photos, numbers, tags, vis
           <span className="truncate font-medium">{t.title || 'Sans titre'}</span>
           {t.favorite && <Icon name="heart" size={14} filled className="shrink-0 text-rouge" />}
         </span>
+        {sync?.user && t.owner && t.owner !== sync.user.uid && (
+          <span className="etiquette block text-bleu">Partagé par {t.ownerEmail}</span>
+        )}
         <span className="block truncate text-sm text-encre-douce">
           {t.place.name} · {formatDates(t.startDate, t.endDate)}
         </span>
@@ -220,6 +225,38 @@ export default function Catalog({ trips, wishes = [], photos, numbers, tags, vis
         </ul>
 
         <footer className="grid grid-cols-2 gap-2 border-t border-trait p-4 [padding-bottom:max(1rem,env(safe-area-inset-bottom))]">
+          {sync?.available && (
+            <div className="col-span-2 mb-2 border-b border-trait pb-3">
+              {sync.user ? (
+                <div className="flex items-center gap-3">
+                  {sync.user.photo ? (
+                    <img src={sync.user.photo} alt="" referrerPolicy="no-referrer" className="h-8 w-8 rounded-full" />
+                  ) : (
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-bleu font-mono text-sm text-sur-bleu">
+                      {sync.user.email[0].toUpperCase()}
+                    </span>
+                  )}
+                  <div className="min-w-0 flex-1 text-sm">
+                    <p className="truncate font-medium">{sync.user.email}</p>
+                    <p className={sync.status === 'error' ? 'text-rouge' : 'text-encre-douce'} role="status">
+                      {SYNC_STATUS[sync.status]}
+                    </p>
+                  </div>
+                  <button onClick={sync.signOut} className="etiquette shrink-0 text-encre-muette">
+                    Déconnexion
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <button onClick={sync.signIn} className="option-flottante w-full justify-center shadow-none">
+                    <Icon name="upload" size={18} />
+                    Se connecter avec Google
+                  </button>
+                  <p className="mt-1 text-xs text-encre-douce">Synchronise ton téléphone et ton PC, et partage tes voyages.</p>
+                </>
+              )}
+            </div>
+          )}
           <div className="col-span-2 mb-1 flex items-center gap-3">
             <span className="etiquette text-encre-muette">Thème</span>
             <div className="grid flex-1 grid-cols-3 rounded-[8px] border border-trait bg-surface p-0.5" role="radiogroup" aria-label="Thème">

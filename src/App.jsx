@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useCarnet } from './hooks/useCarnet.js'
+import { useSync } from './sync/useSync.js'
 import { placeInfo } from './lib/geocode.js'
 import { currentPosition } from './lib/position.js'
 import { backupDue, markBackup, saveFile } from './lib/backup.js'
@@ -28,6 +29,7 @@ const BANNER = {
 
 export default function App() {
   const carnet = useCarnet()
+  const sync = useSync(carnet.reload)
   const { photos, numbers } = carnet
   // Voyages faits d'un côté, idées de voyage de l'autre (même stockage, champ wish)
   const trips = useMemo(() => carnet.trips.filter((t) => !t.wish), [carnet.trips])
@@ -337,6 +339,8 @@ export default function App() {
           number={numbers[selected.id]}
           photos={tripPhotos}
           knownTags={allTags}
+          user={sync.user}
+          onShare={(access) => carnet.updateTrip(selected.id, { access })}
           onUpdate={(fields) => carnet.updateTrip(selected.id, fields)}
           onStopsChange={(stops) => carnet.updateTrip(selected.id, { stops })}
           onAddStop={handleAddStop}
@@ -411,6 +415,7 @@ export default function App() {
           photos={tripsPhotos}
           numbers={numbers}
           needsBackup={needsBackup}
+          sync={sync}
           tags={allTags}
           wishes={wishes}
           visited={visited}

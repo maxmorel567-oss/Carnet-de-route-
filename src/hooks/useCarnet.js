@@ -147,6 +147,7 @@ export function useCarnet() {
 
   return {
     loading,
+    reload,
     trips,
     photos,
     numbers,
