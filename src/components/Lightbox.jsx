@@ -6,6 +6,7 @@ const fmt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long', timeStyle: 'sh
 const POSITION = {
   exif: 'Position lue dans la photo',
   manuel: 'Position placée à la main',
+  position: 'Position du voyage (GPS du téléphone)',
 }
 
 // Visionneuse plein écran, navigation flèches / clavier.

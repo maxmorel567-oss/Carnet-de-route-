@@ -8,7 +8,7 @@ Carnet de voyage strictement personnel, utilisable sur PC et téléphone : retro
 - **Photo** : id, tripId, image compressée (≤ 1600 px, JPEG 0,82), miniature (320 px), lat/lng, gpsSource (`exif` | `manuel` | null), takenAt.
 
 ## Carte
-- Plein écran, Leaflet, tuiles OpenStreetMap, adoucies en clair et inversées en sombre (filtre CSS).
+- Plein écran, Leaflet + MapLibre : style Positron d'OpenFreeMap recoloré aux tokens « Établi » (clair / graphite), noms en français, sans panneaux routiers. Secours : tuiles OpenStreetMap filtrées en CSS (pas de WebGL ou service injoignable).
 - Voyages regroupés de loin (pastille bleue avec le nombre). Un clic sur la pastille zoome, et les voyages au même endroit s'éventaillent au zoom maximal.
 - À partir du zoom 10 : vignettes des photos géolocalisées, elles aussi regroupées (vignette + nombre).
 - Clic sur une épingle : ouvre la fiche. Clic sur une vignette : ouvre la photo. Clic dans le vide : ferme la fiche.
@@ -16,7 +16,7 @@ Carnet de voyage strictement personnel, utilisable sur PC et téléphone : retro
 ## Écrans
 - **Fiche voyage** : panneau droit (≥ 768 px) ou tiroir bas (mobile). Plaque jaune (N°, dates, nombre de photos), titre, lieu, dates, journal, galerie. Enregistrement automatique (500 ms).
 - **Visionneuse** : plein écran, flèches et clavier, date de prise de vue, origine de la position, « Placer sur la carte » / « Déplacer », suppression.
-- **Bouton +** : « Cliquer sur la carte » (bandeau + nom du lieu par géocodage inverse) ou « Rechercher une adresse » (Nominatim, à la validation).
+- **Bouton +** : « Nouveau voyage ici » (géolocalisation haute précision, point bleu + cercle de précision ; voyage `place.precise` : les photos sans GPS y sont placées, `gpsSource: 'position'`), « Cliquer sur la carte » (bandeau + nom du lieu par géocodage inverse) ou « Rechercher une adresse » (Nominatim, à la validation).
 - **Catalogue** : tiroir gauche, voyages triés par date décroissante, filtre texte, export et import JSON.
 
 ## Stockage

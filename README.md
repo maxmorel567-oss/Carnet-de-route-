@@ -2,13 +2,13 @@
 
 Carnet de voyage personnel : une carte plein écran, une épingle par voyage, avec titre, dates, journal de bord et photos.
 
-- **Carte :** Leaflet + fond OpenStreetMap. Vue de loin, les voyages proches sont regroupés (pastille avec le nombre). En zoomant, chaque voyage reprend sa position exacte et les photos apparaissent en vignettes là où elles ont été prises.
+- **Carte :** Leaflet + carte vectorielle OpenFreeMap redessinée aux couleurs « Établi » (tuiles OpenStreetMap en secours). Vue de loin, les voyages proches sont regroupés (pastille avec le nombre). En zoomant, chaque voyage reprend sa position exacte et les photos apparaissent en vignettes là où elles ont été prises.
 - **Photos :** compressées automatiquement (1600 px, JPEG). La position GPS est lue dans la photo. Sinon, bouton « Placer sur la carte ».
-- **Ajout :** bouton « + », puis « Cliquer sur la carte » ou « Rechercher une adresse ».
+- **Ajout :** bouton « + », puis « Nouveau voyage ici » (position GPS du téléphone), « Cliquer sur la carte » ou « Rechercher une adresse ». Dans un voyage créé à ta position, les photos sans GPS (fréquent sur iPhone) sont placées à cet endroit.
 - **Catalogue :** bouton en haut à gauche, liste filtrable, export/import JSON.
 - **App installable (PWA)**, consultation hors-ligne, mode sombre automatique.
 
-**Aucune clé d'API nécessaire.** Les tuiles OpenStreetMap et Nominatim (recherche d'adresse, OpenStreetMap) sont gratuits sans inscription pour un usage personnel.
+**Aucune clé d'API nécessaire.** OpenFreeMap (carte), OpenStreetMap et Nominatim (recherche d'adresse, OpenStreetMap) sont gratuits sans inscription pour un usage personnel.
 
 ## 1. Lancer en local
 

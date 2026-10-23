@@ -32,7 +32,17 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         runtimeCaching: [
           {
-            // Tuiles de carte déjà vues : consultables hors-ligne
+            // Carte vectorielle (style, tuiles, polices) : consultable hors-ligne là où on est déjà passé
+            urlPattern: /^https:\/\/tiles\.openfreemap\.org\//,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'carte',
+              expiration: { maxEntries: 3000, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // Tuiles de secours
             urlPattern: /^https:\/\/tile\.openstreetmap\.org\//,
             handler: 'CacheFirst',
             options: {

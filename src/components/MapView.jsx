@@ -1,9 +1,47 @@
 import { useEffect, useRef } from 'react'
+import 'maplibre-gl/dist/maplibre-gl.css'
 import L from '../lib/leaflet.js'
+import { ATTRIBUTION, buildStyle, webglSupported } from '../lib/mapStyle.js'
 
-// Tuiles OpenStreetMap : gratuites, sans clé. Le thème sombre est obtenu en CSS (index.css).
-const TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
-const ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+// Secours si la carte vectorielle ne peut pas s'afficher (pas de WebGL, service injoignable)
+const OSM_TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+
+const darkQuery = window.matchMedia('(prefers-color-scheme: dark)')
+
+// Fond de carte « Établi » (vectoriel), ou tuiles OSM en secours. Renvoie une fonction de nettoyage.
+function addBaseLayer(map) {
+  const fallback = () =>
+    L.tileLayer(OSM_TILES, { attribution: OSM_ATTRIBUTION, maxZoom: 19, className: 'tuiles-osm' }).addTo(map)
+  if (!webglSupported()) {
+    fallback()
+    return () => {}
+  }
+
+  let layer
+  let cancelled = false
+  const onTheme = async (e) => {
+    try {
+      layer?.getMaplibreMap().setStyle(await buildStyle(e.matches))
+    } catch {
+      // On garde le style déjà affiché.
+    }
+  }
+  import('@maplibre/maplibre-gl-leaflet')
+    .then(async () => {
+      const style = await buildStyle(darkQuery.matches)
+      if (cancelled) return
+      layer = L.maplibreGL({ style, attributionControl: false }).addTo(map)
+      map.attributionControl.addAttribution(ATTRIBUTION)
+      darkQuery.addEventListener('change', onTheme)
+    })
+    .catch(() => !cancelled && fallback())
+
+  return () => {
+    cancelled = true
+    darkQuery.removeEventListener('change', onTheme)
+  }
+}
 
 // Zoom à partir duquel les photos apparaissent en vignettes.
 const PHOTO_ZOOM = 10
@@ -29,6 +67,8 @@ const clusterIcon = (cluster) => {
   })
 }
 
+const positionIcon = L.divIcon({ className: '', html: '<div class="ma-position"></div>', iconSize: [20, 20] })
+
 const photoIcon = (url, count = 1) =>
   L.divIcon({
     className: '',
@@ -45,20 +85,22 @@ const photoClusterIcon = (cluster) =>
  * Carte plein écran. Leaflet est piloté directement (hors React) pour gérer
  * le regroupement des épingles et les vignettes photo.
  */
-export default function MapView({ trips, photos, selectedId, onSelectTrip, onSelectPhoto, onMapClick, focus }) {
+export default function MapView({ trips, photos, selectedId, myPosition, onSelectTrip, onSelectPhoto, onMapClick, focus }) {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
   const clusterRef = useRef(null)
   const photoLayerRef = useRef(null)
+  const positionLayerRef = useRef(null)
   const handlers = useRef({})
   handlers.current = { onSelectTrip, onSelectPhoto, onMapClick }
 
   // Création de la carte (une seule fois)
   useEffect(() => {
-    const map = L.map(containerRef.current, { zoomControl: false, worldCopyJump: true }).setView([30, 10], 3)
+    const map = L.map(containerRef.current, { zoomControl: false, worldCopyJump: true, minZoom: 2, maxZoom: 19 }).setView([30, 10], 3)
     L.control.zoom({ position: 'topright' }).addTo(map)
-
-    L.tileLayer(TILES, { attribution: ATTRIBUTION, maxZoom: 19 }).addTo(map)
+    map.attributionControl.setPrefix(false)
+    const removeBase = addBaseLayer(map)
+    positionLayerRef.current = L.layerGroup().addTo(map)
 
     clusterRef.current = L.markerClusterGroup({
       showCoverageOnHover: false,
@@ -82,7 +124,10 @@ export default function MapView({ trips, photos, selectedId, onSelectTrip, onSel
     map.on('click', (e) => handlers.current.onMapClick?.(e.latlng))
 
     mapRef.current = map
-    return () => map.remove()
+    return () => {
+      removeBase()
+      map.remove()
+    }
   }, [])
 
   // Épingles de voyage
@@ -114,6 +159,16 @@ export default function MapView({ trips, photos, selectedId, onSelectTrip, onSel
         ),
     )
   }, [photos])
+
+  // Ma position : point bleu + cercle de précision
+  useEffect(() => {
+    const layer = positionLayerRef.current
+    layer.clearLayers()
+    if (!myPosition) return
+    const { lat, lng, accuracy } = myPosition
+    L.circle([lat, lng], { radius: accuracy, className: 'precision', interactive: false }).addTo(layer)
+    L.marker([lat, lng], { icon: positionIcon, interactive: false, zIndexOffset: -100 }).addTo(layer)
+  }, [myPosition])
 
   // Centrage demandé par l'application, décalé pour rester visible à côté du panneau
   useEffect(() => {

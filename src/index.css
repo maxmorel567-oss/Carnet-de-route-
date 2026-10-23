@@ -119,10 +119,27 @@ body {
   background: var(--bois);
   font-family: var(--font-sans);
 }
-/* Fond OSM adouci ; en sombre, inversé en graphite */
-.leaflet-tile-pane { filter: saturate(0.55) contrast(0.95); }
+/* Tuiles OSM de secours : adoucies ; en sombre, inversées en graphite */
+.tuiles-osm { filter: saturate(0.55) contrast(0.95); }
 @media (prefers-color-scheme: dark) {
-  .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) saturate(0.4) brightness(0.85) contrast(0.9); }
+  .tuiles-osm { filter: invert(1) hue-rotate(180deg) saturate(0.4) brightness(0.85) contrast(0.9); }
+}
+
+/* Ma position */
+.ma-position {
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  background: var(--bleu);
+  border: 3px solid var(--surface);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.35);
+}
+.precision {
+  fill: var(--bleu);
+  fill-opacity: 0.12;
+  stroke: var(--bleu);
+  stroke-opacity: 0.4;
+  stroke-width: 1;
 }
 
 .leaflet-control-attribution {

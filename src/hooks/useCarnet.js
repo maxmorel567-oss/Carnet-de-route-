@@ -49,11 +49,12 @@ export function useCarnet() {
   }, [trips])
 
   const createTrip = useCallback(
-    async ({ name, lat, lng }) => {
+    // precise : position GPS du téléphone (et pas un centre-ville trouvé par recherche)
+    async ({ name, lat, lng, precise = false }) => {
       const trip = await store.saveTrip({
         id: newId(),
         title: name,
-        place: { name, lat, lng },
+        place: { name, lat, lng, precise },
         startDate: todayIso(),
         endDate: '',
         notes: '',
@@ -84,10 +85,15 @@ export function useCarnet() {
 
   const addPhotos = useCallback(
     async (tripId, files) => {
+      const trip = trips.find((t) => t.id === tripId)
       const errors = []
       for (const file of files) {
         try {
           const data = await processImage(file)
+          // Photo sans GPS (fréquent sur iPhone) dans un voyage créé à ma position : on la place là.
+          if (data.lat == null && trip?.place.precise) {
+            Object.assign(data, { lat: trip.place.lat, lng: trip.place.lng, gpsSource: 'position' })
+          }
           await store.savePhoto({ id: newId(), tripId, createdAt: Date.now(), ...data })
         } catch (e) {
           errors.push(e.message)
@@ -96,7 +102,7 @@ export function useCarnet() {
       await reload()
       return errors
     },
-    [reload],
+    [trips, reload],
   )
 
   const placePhoto = useCallback(

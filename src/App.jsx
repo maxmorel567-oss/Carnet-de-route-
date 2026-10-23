@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useCarnet } from './hooks/useCarnet.js'
 import { placeName } from './lib/geocode.js'
+import { currentPosition } from './lib/position.js'
 import MapView from './components/MapView.jsx'
 import TripPanel from './components/TripPanel.jsx'
 import Lightbox from './components/Lightbox.jsx'
@@ -21,6 +22,7 @@ export default function App() {
   const [searchOpen, setSearchOpen] = useState(false)
   const [focus, setFocus] = useState(null)
   const [toast, setToast] = useState('')
+  const [myPosition, setMyPosition] = useState(null)
 
   const selected = trips.find((t) => t.id === selectedId)
   const tripPhotos = useMemo(
@@ -34,16 +36,29 @@ export default function App() {
     return () => clearTimeout(timer)
   }, [toast])
 
-  const openTrip = useCallback((trip) => {
+  const openTrip = useCallback((trip, zoom) => {
     setSelectedId(trip.id)
     setMode(null)
     setCatalogOpen(false)
-    setFocus({ lat: trip.place.lat, lng: trip.place.lng })
+    setFocus({ lat: trip.place.lat, lng: trip.place.lng, zoom })
   }, [])
 
   const addTripAt = async (lat, lng, name) => {
     const trip = await carnet.createTrip({ name: name ?? (await placeName(lat, lng)), lat, lng })
     openTrip(trip)
+  }
+
+  const addTripHere = async () => {
+    setToast('Recherche de ta position…')
+    try {
+      const pos = await currentPosition()
+      setMyPosition(pos)
+      const trip = await carnet.createTrip({ name: await placeName(pos.lat, pos.lng), lat: pos.lat, lng: pos.lng, precise: true })
+      openTrip(trip, 15)
+      setToast('Voyage créé à ta position. Les photos sans GPS y seront placées.')
+    } catch (e) {
+      setToast(e.message)
+    }
   }
 
   const handleMapClick = async ({ lat, lng }) => {
@@ -92,6 +107,7 @@ export default function App() {
         trips={trips}
         photos={photos}
         selectedId={selectedId}
+        myPosition={myPosition}
         focus={focus}
         onMapClick={handleMapClick}
         onSelectTrip={(id) => openTrip(trips.find((t) => t.id === id))}
@@ -138,6 +154,7 @@ export default function App() {
             setMode({ type: 'voyage' })
           }}
           onSearch={() => setSearchOpen(true)}
+          onHere={addTripHere}
         />
       )}
 
