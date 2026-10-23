@@ -10,6 +10,7 @@ const countryNames = new Intl.DisplayNames(['fr'], { type: 'region' })
 export default function Catalog({ trips, photos, numbers, tags, visited = [], activeTag, onTag, needsBackup, onSelect, onClose, onExport, onImport }) {
   const [filter, setFilter] = useState('')
   const [view, setView] = useState('liste') // 'liste' | 'frise'
+  const [favOnly, setFavOnly] = useState(false)
   const fileInput = useRef(null)
 
   // Nombre de photos et vignette de couverture par voyage
@@ -32,9 +33,10 @@ export default function Catalog({ trips, photos, numbers, tags, visited = [], ac
     const q = filter.trim().toLowerCase()
     return trips
       .filter((t) => !activeTag || t.tags?.includes(activeTag))
-      .filter((t) => !q || `${t.title} ${t.place.name} ${t.notes} ${(t.tags ?? []).join(' ')} ${(t.stops ?? []).map((s) => s.name).join(' ')}`.toLowerCase().includes(q))
+      .filter((t) => !favOnly || t.favorite)
+      .filter((t) => !q || `${t.title} ${t.place.name} ${t.notes} ${(t.tags ?? []).join(' ')} ${(t.stops ?? []).map((s) => s.name).join(' ')} ${(t.entries ?? []).map((e) => e.text).join(' ')}`.toLowerCase().includes(q))
       .sort((a, b) => (b.startDate || '').localeCompare(a.startDate || ''))
-  }, [trips, filter, activeTag])
+  }, [trips, filter, activeTag, favOnly])
 
   // Frise : voyages regroupés par année (les plus récents d'abord)
   const years = useMemo(() => {
@@ -56,7 +58,10 @@ export default function Catalog({ trips, photos, numbers, tags, visited = [], ac
         </span>
       )}
       <span className="min-w-0 flex-1">
-        <span className="block truncate font-medium">{t.title || 'Sans titre'}</span>
+        <span className="flex items-center gap-1">
+          <span className="truncate font-medium">{t.title || 'Sans titre'}</span>
+          {t.favorite && <Icon name="heart" size={14} filled className="shrink-0 text-rouge" />}
+        </span>
         <span className="block truncate text-sm text-encre-douce">
           {t.place.name} · {formatDates(t.startDate, t.endDate)}
         </span>
@@ -129,9 +134,10 @@ export default function Catalog({ trips, photos, numbers, tags, visited = [], ac
               </button>
             ))}
           </div>
-          {tags.length > 0 && (
+          {(tags.length > 0 || trips.some((t) => t.favorite)) && (
             <div className="mt-3 flex gap-2 overflow-x-auto pb-1" aria-label="Filtrer par étiquette">
-              <Chip label="Tous" active={!activeTag} onClick={() => onTag(null)} />
+              <Chip label="Tous" active={!activeTag && !favOnly} onClick={() => (onTag(null), setFavOnly(false))} />
+              {trips.some((t) => t.favorite) && <Chip label="Coups de cœur" active={favOnly} onClick={() => setFavOnly((f) => !f)} />}
               {tags.map((t) => (
                 <Chip key={t} label={t} active={t === activeTag} onClick={() => onTag(t === activeTag ? null : t)} />
               ))}

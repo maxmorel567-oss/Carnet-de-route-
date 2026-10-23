@@ -30,7 +30,7 @@ export default function Stops({ trip, onChange, onAdd }) {
           </span>
         )}
       </div>
-      <ol className="mt-2 flex flex-col gap-1">
+      <ol className="mt-2 flex flex-col gap-1" aria-label="Étapes">
         {all.map((s, i) => (
           <li key={s.id ?? 'depart'} className="flex items-center gap-3 rounded-[8px] py-1">
             <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-bleu font-mono text-xs font-bold text-sur-bleu">

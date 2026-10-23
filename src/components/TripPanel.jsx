@@ -4,9 +4,10 @@ import Plaque from './Plaque.jsx'
 import PhotoGrid from './PhotoGrid.jsx'
 import { TagEditor } from './Tags.jsx'
 import Stops from './Stops.jsx'
+import Journal from './Journal.jsx'
 
 const SAVE_DELAY = 500
-const FIELDS = ['title', 'startDate', 'endDate', 'notes', 'tags']
+const FIELDS = ['title', 'startDate', 'endDate', 'notes', 'tags', 'entries', 'rating', 'favorite']
 const pick = (trip) => Object.fromEntries(FIELDS.map((f) => [f, trip[f]]))
 
 /**
@@ -36,9 +37,10 @@ export default function TripPanel({ trip, number, photos, knownTags, onUpdate, o
 
   useEffect(() => () => pending.current && onUpdate(pending.current), []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const setTags = (tags) => {
+  // Modification directe d'un champ (étiquettes, journal, note, favori)
+  const setField = (field) => (value) => {
     dirty.current = true
-    setDraft((d) => ({ ...d, tags }))
+    setDraft((d) => ({ ...d, [field]: value }))
   }
 
   const set = (field) => (e) => {
@@ -94,16 +96,41 @@ export default function TripPanel({ trip, number, photos, knownTags, onUpdate, o
         )}
         <Plaque number={number} startDate={draft.startDate} endDate={draft.endDate} photoCount={photos.length} />
 
-        <input
-          value={draft.title}
-          onChange={set('title')}
-          placeholder="Titre du voyage"
-          className="mt-6 w-full bg-transparent font-mono text-2xl leading-[30px] font-bold text-encre outline-none placeholder:text-encre-muette"
-        />
+        <div className="mt-6 flex items-start gap-2">
+          <input
+            value={draft.title}
+            onChange={set('title')}
+            placeholder="Titre du voyage"
+            aria-label="Titre du voyage"
+            className="min-w-0 flex-1 bg-transparent font-mono text-2xl leading-[30px] font-bold text-encre outline-none placeholder:text-encre-muette"
+          />
+          <button
+            onClick={() => setField('favorite')(!draft.favorite)}
+            aria-pressed={Boolean(draft.favorite)}
+            aria-label="Coup de cœur"
+            className={`rounded-[8px] p-1 ${draft.favorite ? 'text-rouge' : 'text-encre-muette hover:text-encre'}`}
+          >
+            <Icon name="heart" size={26} filled={draft.favorite} />
+          </button>
+        </div>
         <p className="mt-2 flex items-center gap-1 text-sm text-encre-douce">
           <Icon name="pin" size={16} className="shrink-0 text-bleu" />
           {trip.place.name}
         </p>
+        <div className="mt-3 flex items-center gap-0.5" role="radiogroup" aria-label="Note du voyage">
+          {[1, 2, 3, 4, 5].map((n) => (
+            <button
+              key={n}
+              role="radio"
+              aria-checked={draft.rating === n}
+              aria-label={`${n} sur 5`}
+              onClick={() => setField('rating')(draft.rating === n ? 0 : n)}
+              className={`p-0.5 ${n <= (draft.rating ?? 0) ? 'text-bleu' : 'text-trait hover:text-encre-muette'}`}
+            >
+              <Icon name="star" size={22} filled={n <= (draft.rating ?? 0)} />
+            </button>
+          ))}
+        </div>
 
         <div className="mt-6 grid grid-cols-2 gap-3">
           <label className="block">
@@ -120,17 +147,19 @@ export default function TripPanel({ trip, number, photos, knownTags, onUpdate, o
 
         <div className="mt-6">
           <span className="etiquette text-encre-muette">Étiquettes</span>
-          <TagEditor tags={draft.tags ?? []} known={knownTags} onChange={setTags} />
+          <TagEditor tags={draft.tags ?? []} known={knownTags} onChange={setField('tags')} />
         </div>
 
+        <Journal trip={draft} entries={draft.entries ?? []} onChange={setField('entries')} />
+
         <label className="mt-6 block">
-          <span className="etiquette text-encre-muette">Journal de bord</span>
+          <span className="etiquette text-encre-muette">Notes</span>
           <textarea
             value={draft.notes}
             onChange={set('notes')}
-            rows={6}
-            placeholder="Ce qui s'est passé, ce qu'il faut retenir…"
-            className="champ mt-1 min-h-[140px] resize-y"
+            rows={3}
+            placeholder="Infos pratiques, adresses, à retenir…"
+            className="champ mt-1 resize-y"
           />
         </label>
 

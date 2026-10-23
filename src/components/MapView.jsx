@@ -167,6 +167,10 @@ export default function MapView({ trips, photos, selectedId, myPosition, route, 
       if (!visible && map.hasLayer(photoLayerRef.current)) photoLayerRef.current.remove()
     }
     map.on('zoomend', togglePhotos)
+    // De près, la teinte des pays visités s'efface pour ne pas griser tout l'écran
+    const fadeCountries = () => containerRef.current?.classList.toggle('zoom-proche', map.getZoom() >= 6)
+    map.on('zoomend', fadeCountries)
+    fadeCountries()
     togglePhotos()
     map.on('click', (e) => handlers.current.onMapClick?.(e.latlng))
 

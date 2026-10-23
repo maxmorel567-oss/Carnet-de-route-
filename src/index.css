@@ -17,6 +17,7 @@
   --jaune: #F2C230;
   --sur-jaune: #1E1E1E;
   --photo-vide: #D9D0C1;
+  --rouge: #D7261E; /* rouge punaise : coups de cœur */
   color-scheme: light;
 }
 
@@ -51,6 +52,7 @@
   --color-jaune: var(--jaune);
   --color-sur-jaune: var(--sur-jaune);
   --color-photo-vide: var(--photo-vide);
+  --color-rouge: var(--rouge);
   --font-mono: "Space Mono", ui-monospace, monospace;
   --font-sans: "Space Grotesk", system-ui, sans-serif;
 }
@@ -311,3 +313,4 @@ body {
   background: var(--bleu);
   border: 2px solid var(--fond);
 }
+.zoom-proche .pays-visite { fill-opacity: 0.04; stroke-opacity: 0.15; }

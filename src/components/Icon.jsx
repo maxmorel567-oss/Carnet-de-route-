@@ -14,18 +14,21 @@ const PATHS = {
   left: 'M15 6l-6 6 6 6',
   up: 'M6 15l6-6 6 6',
   play: 'M8 5v14l11-7z',
+  heart: 'M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.3a4.3 4.3 0 0 1 7.5 2.5C19.5 15.4 12 20 12 20z',
+  star: 'M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.8z',
   pause: 'M9 5v14M15 5v14',
   down: 'M6 9l6 6 6-6',
   right: 'M9 6l6 6-6 6',
 }
 
-export default function Icon({ name, size = 20, className = '' }) {
+// filled : forme pleine (cœur, étoile actifs)
+export default function Icon({ name, size = 20, className = '', filled = false }) {
   return (
     <svg
       width={size}
       height={size}
       viewBox="0 0 24 24"
-      fill="none"
+      fill={filled ? 'currentColor' : 'none'}
       stroke="currentColor"
       strokeWidth="1.8"
       strokeLinecap="round"
