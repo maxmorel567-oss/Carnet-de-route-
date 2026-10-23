@@ -25,8 +25,17 @@ export default function App() {
   const [focus, setFocus] = useState(null)
   const [toast, setToast] = useState('')
   const [myPosition, setMyPosition] = useState(null)
+  const [activeTag, setActiveTag] = useState(null)
 
   const selected = trips.find((t) => t.id === selectedId)
+  const allTags = useMemo(() => [...new Set(trips.flatMap((t) => t.tags ?? []))].sort((a, b) => a.localeCompare(b, 'fr')), [trips])
+  // Filtre par étiquette : la carte ne montre que les voyages concernés et leurs photos.
+  const shownTrips = useMemo(() => (activeTag ? trips.filter((t) => t.tags?.includes(activeTag)) : trips), [trips, activeTag])
+  const shownPhotos = useMemo(() => {
+    if (!activeTag) return photos
+    const ids = new Set(shownTrips.map((t) => t.id))
+    return photos.filter((p) => ids.has(p.tripId))
+  }, [photos, shownTrips, activeTag])
   const tripPhotos = useMemo(
     () => photos.filter((p) => p.tripId === selectedId).sort((a, b) => (a.takenAt ?? a.createdAt) - (b.takenAt ?? b.createdAt)),
     [photos, selectedId],
@@ -108,8 +117,8 @@ export default function App() {
   return (
     <div className={`relative h-full overflow-hidden ${mode ? 'mode-placement' : ''}`}>
       <MapView
-        trips={trips}
-        photos={photos}
+        trips={shownTrips}
+        photos={shownPhotos}
         selectedId={selectedId}
         myPosition={myPosition}
         focus={focus}
@@ -131,6 +140,17 @@ export default function App() {
         <span className="etiquette hidden sm:inline">Carnet de route</span>
         {needsBackup && <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full border-2 border-surface bg-bleu" aria-label="Sauvegarde conseillée" />}
       </button>
+
+      {activeTag && (
+        <button
+          onClick={() => setActiveTag(null)}
+          className="puce puce-active fixed top-3 left-16 z-[900] py-2 shadow-md [top:max(0.75rem,env(safe-area-inset-top))] sm:left-52"
+          aria-label={`Retirer le filtre ${activeTag}`}
+        >
+          {activeTag}
+          <Icon name="close" size={14} />
+        </button>
+      )}
 
       {!mode && !panelVisible && <InstallBanner hasTrips={trips.length > 0} />}
 
@@ -171,6 +191,7 @@ export default function App() {
           trip={selected}
           number={numbers[selected.id]}
           photos={tripPhotos}
+          knownTags={allTags}
           onUpdate={(fields) => carnet.updateTrip(selected.id, fields)}
           onDelete={async () => {
             await carnet.removeTrip(selected.id)
@@ -221,6 +242,9 @@ export default function App() {
           photos={photos}
           numbers={numbers}
           needsBackup={needsBackup}
+          tags={allTags}
+          activeTag={activeTag}
+          onTag={setActiveTag}
           onSelect={openTrip}
           onClose={() => setCatalogOpen(false)}
           onExport={handleExport}

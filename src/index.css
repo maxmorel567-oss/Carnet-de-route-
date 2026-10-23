@@ -240,3 +240,23 @@ body {
 @media (max-width: 767px) {
   .leaflet-control-zoom { display: none; }
 }
+
+/* Étiquette de voyage */
+.puce {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--trait);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--encre);
+  padding: 2px 8px;
+  font-size: 14px;
+  line-height: 22px;
+  white-space: nowrap;
+}
+.puce-active {
+  border-color: var(--bleu);
+  background: var(--bleu);
+  color: var(--sur-bleu);
+}

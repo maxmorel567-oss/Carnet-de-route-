@@ -2,9 +2,10 @@ import { useMemo, useRef, useState } from 'react'
 import Icon from './Icon.jsx'
 import { formatDates, padNumber } from '../lib/format.js'
 import { formatLastBackup } from '../lib/backup.js'
+import { Chip } from './Tags.jsx'
 
 // Menu latéral : catalogue textuel des voyages + sauvegarde.
-export default function Catalog({ trips, photos, numbers, needsBackup, onSelect, onClose, onExport, onImport }) {
+export default function Catalog({ trips, photos, numbers, tags, activeTag, onTag, needsBackup, onSelect, onClose, onExport, onImport }) {
   const [filter, setFilter] = useState('')
   const fileInput = useRef(null)
 
@@ -24,9 +25,10 @@ export default function Catalog({ trips, photos, numbers, needsBackup, onSelect,
   const list = useMemo(() => {
     const q = filter.trim().toLowerCase()
     return trips
-      .filter((t) => !q || `${t.title} ${t.place.name} ${t.notes}`.toLowerCase().includes(q))
+      .filter((t) => !activeTag || t.tags?.includes(activeTag))
+      .filter((t) => !q || `${t.title} ${t.place.name} ${t.notes} ${(t.tags ?? []).join(' ')}`.toLowerCase().includes(q))
       .sort((a, b) => (b.startDate || '').localeCompare(a.startDate || ''))
-  }, [trips, filter])
+  }, [trips, filter, activeTag])
 
   const handleImport = (e) => {
     const file = e.target.files[0]
@@ -59,6 +61,14 @@ export default function Catalog({ trips, photos, numbers, needsBackup, onSelect,
             placeholder="Filtrer…"
             className="champ mt-4 bg-surface"
           />
+          {tags.length > 0 && (
+            <div className="mt-3 flex gap-2 overflow-x-auto pb-1" aria-label="Filtrer par étiquette">
+              <Chip label="Tous" active={!activeTag} onClick={() => onTag(null)} />
+              {tags.map((t) => (
+                <Chip key={t} label={t} active={t === activeTag} onClick={() => onTag(t === activeTag ? null : t)} />
+              ))}
+            </div>
+          )}
         </header>
 
         <ul className="flex-1 overflow-y-auto px-3 py-3">

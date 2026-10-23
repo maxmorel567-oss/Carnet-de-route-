@@ -145,7 +145,10 @@ export default function MapView({ trips, photos, selectedId, myPosition, onSelec
       iconCreateFunction: clusterIcon,
     }).addTo(map)
 
+    // Les photos passent sous les punaises (calque dédié sous celui des marqueurs)
+    map.createPane('photos').style.zIndex = 590
     photoLayerRef.current = L.markerClusterGroup({
+      clusterPane: 'photos',
       showCoverageOnHover: false,
       maxClusterRadius: 44,
       iconCreateFunction: photoClusterIcon,
@@ -189,7 +192,7 @@ export default function MapView({ trips, photos, selectedId, myPosition, onSelec
       photos
         .filter((p) => p.lat != null)
         .map((p) =>
-          L.marker([p.lat, p.lng], { icon: photoIcon(p.thumbUrl), thumbUrl: p.thumbUrl }).on('click', () =>
+          L.marker([p.lat, p.lng], { icon: photoIcon(p.thumbUrl), thumbUrl: p.thumbUrl, pane: 'photos' }).on('click', () =>
             handlers.current.onSelectPhoto(p),
           ),
         ),

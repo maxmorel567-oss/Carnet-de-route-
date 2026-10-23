@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import Icon from './Icon.jsx'
 import Plaque from './Plaque.jsx'
 import PhotoGrid from './PhotoGrid.jsx'
+import { TagEditor } from './Tags.jsx'
 
 const SAVE_DELAY = 500
-const FIELDS = ['title', 'startDate', 'endDate', 'notes']
+const FIELDS = ['title', 'startDate', 'endDate', 'notes', 'tags']
 const pick = (trip) => Object.fromEntries(FIELDS.map((f) => [f, trip[f]]))
 
 /**
@@ -12,7 +13,7 @@ const pick = (trip) => Object.fromEntries(FIELDS.map((f) => [f, trip[f]]))
  * Tous les champs sont modifiables directement et enregistrés automatiquement.
  * Monté avec key={trip.id} : le brouillon repart de zéro à chaque voyage.
  */
-export default function TripPanel({ trip, number, photos, onUpdate, onDelete, onClose, onAddPhotos, onOpenPhoto }) {
+export default function TripPanel({ trip, number, photos, knownTags, onUpdate, onDelete, onClose, onAddPhotos, onOpenPhoto }) {
   // Brouillon des seuls champs modifiés ici ; onUpdate(champs) les fusionne dans le voyage.
   const [draft, setDraft] = useState(() => pick(trip))
   const [busy, setBusy] = useState(false)
@@ -33,6 +34,11 @@ export default function TripPanel({ trip, number, photos, onUpdate, onDelete, on
   }, [draft]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => () => pending.current && onUpdate(pending.current), []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const setTags = (tags) => {
+    dirty.current = true
+    setDraft((d) => ({ ...d, tags }))
+  }
 
   const set = (field) => (e) => {
     const value = e.target.value
@@ -107,6 +113,11 @@ export default function TripPanel({ trip, number, photos, onUpdate, onDelete, on
             <span className="etiquette text-encre-muette">Fin</span>
             <input type="date" value={draft.endDate} min={draft.startDate} onChange={set('endDate')} className="champ mt-1" />
           </label>
+        </div>
+
+        <div className="mt-6">
+          <span className="etiquette text-encre-muette">Étiquettes</span>
+          <TagEditor tags={draft.tags ?? []} known={knownTags} onChange={setTags} />
         </div>
 
         <label className="mt-6 block">
