@@ -1,9 +1,10 @@
 import { useMemo, useRef, useState } from 'react'
 import Icon from './Icon.jsx'
 import { formatDates, padNumber } from '../lib/format.js'
+import { formatLastBackup } from '../lib/backup.js'
 
 // Menu latéral : catalogue textuel des voyages + sauvegarde.
-export default function Catalog({ trips, photos, numbers, onSelect, onClose, onExport, onImport }) {
+export default function Catalog({ trips, photos, numbers, needsBackup, onSelect, onClose, onExport, onImport }) {
   const [filter, setFilter] = useState('')
   const fileInput = useRef(null)
 
@@ -81,6 +82,10 @@ export default function Catalog({ trips, photos, numbers, onSelect, onClose, onE
         </ul>
 
         <footer className="grid grid-cols-2 gap-2 border-t border-trait p-4 [padding-bottom:max(1rem,env(safe-area-inset-bottom))]">
+          <p className={`col-span-2 text-sm ${needsBackup ? 'font-medium text-bleu' : 'text-encre-douce'}`}>
+            {formatLastBackup()}
+            {needsBackup && ' : pense à exporter.'}
+          </p>
           <button onClick={onExport} className="option-flottante justify-center shadow-none">
             <Icon name="download" size={18} />
             Exporter

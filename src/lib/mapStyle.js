@@ -14,7 +14,7 @@ const PALETTES = {
     eau: '#C9D6E6',
     route: '#FFFFFF',
     trait: '#DDD3C2',
-    frontiere: '#B5AA98',
+    frontiere: '#CDBFA9',
     texte: '#4A443B',
     titre: '#1E1E1E',
     bleu: '#2459A8',
@@ -27,7 +27,7 @@ const PALETTES = {
     eau: '#1D2531',
     route: '#3D3833',
     trait: '#2E2A26',
-    frontiere: '#5A534A',
+    frontiere: '#4A443D',
     texte: '#C9C1B4',
     titre: '#F3EEE6',
     bleu: '#6B9BE6',
@@ -44,15 +44,16 @@ const rules = (c) => [
   [/^landuse_residential$/, { 'fill-color': c.bois }],
   [/^building$/, { 'fill-color': c.bati, 'fill-outline-color': c.trait }],
   [/^(aeroway-area|road_area_pier)$/, { 'fill-color': c.bois }],
-  [/dashline$/, { 'line-color': c.fond }],
-  [/^railway/, { 'line-color': c.trait }],
   [/casing$|subtle$/, { 'line-color': c.trait }],
   [/inner$|^highway_(path|minor)$|^road_pier$|^aeroway-(taxiway|runway)$/, { 'line-color': c.route }],
   [/^boundary/, { 'line-color': c.frontiere }],
 ]
 
-// Panneaux de route et pictos noirs : du bruit pour un carnet de voyage.
-const REMOVED = /shield/
+// Couches retirées pour une carte calme : panneaux, aéroports, quartiers, régions, rails, noms de petites rues.
+const REMOVED = /shield|^airport$|^label_(other|state)$|^boundary_3$|^waterway_line_label$|^highway-name-(path|minor)$|^railway/
+// Moins de noms à petite échelle : on les fait apparaître plus tard.
+const MIN_ZOOM = { label_city: 5, label_city_capital: 4, label_town: 9, label_village: 12, label_country_3: 4 }
+const COUNTRY_SIZE = ['interpolate', ['linear'], ['zoom'], 2, 10, 6, 14]
 const NAME_FR = ['coalesce', ['get', 'name:fr'], ['get', 'name:latin'], ['get', 'name']]
 
 let sourcePromise
@@ -79,15 +80,23 @@ export async function buildStyle(dark) {
           layout['text-anchor'] = 'center'
           delete layout['text-offset']
         }
-        paint['text-color'] = /^water/.test(layer.id) ? c.bleu : /country|capital/.test(layer.id) ? c.titre : c.texte
+        // Pays façon atlas : majuscules espacées, sans gras
+        if (/^label_country/.test(layer.id)) {
+          Object.assign(layout, { 'text-font': ['Noto Sans Regular'], 'text-transform': 'uppercase', 'text-letter-spacing': 0.14, 'text-size': COUNTRY_SIZE })
+        }
+        if (layer.id === 'label_city_capital') layout['text-font'] = ['Noto Sans Regular']
+        paint['text-color'] = /^water/.test(layer.id) ? c.bleu : /^label_country/.test(layer.id) ? c.texte : c.titre
         paint['text-halo-color'] = c.fond
         paint['text-halo-width'] = 1.2
         paint['text-halo-blur'] = 0
       } else {
         const match = colorRules.find(([pattern]) => pattern.test(layer.id))
         if (match) Object.assign(paint, match[1])
+        if (/^boundary/.test(layer.id)) paint['line-width'] = ['interpolate', ['linear'], ['zoom'], 2, 0.6, 6, 1, 12, 1.6]
       }
-      return { ...layer, paint, layout }
+      const result = { ...layer, paint, layout }
+      if (MIN_ZOOM[layer.id]) result.minzoom = Math.max(layer.minzoom ?? 0, MIN_ZOOM[layer.id])
+      return result
     })
   return source
 }

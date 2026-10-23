@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useCarnet } from './hooks/useCarnet.js'
 import { placeName } from './lib/geocode.js'
 import { currentPosition } from './lib/position.js'
+import { backupDue, markBackup, saveFile } from './lib/backup.js'
 import MapView from './components/MapView.jsx'
 import TripPanel from './components/TripPanel.jsx'
 import Lightbox from './components/Lightbox.jsx'
@@ -9,6 +10,7 @@ import AddButton from './components/AddButton.jsx'
 import SearchDialog from './components/SearchDialog.jsx'
 import Catalog from './components/Catalog.jsx'
 import Icon from './components/Icon.jsx'
+import InstallBanner from './components/InstallBanner.jsx'
 
 // mode : null | { type: 'voyage' } (placer un voyage) | { type: 'photo', photoId }
 export default function App() {
@@ -74,15 +76,17 @@ export default function App() {
     }
   }
 
+  const [backupVersion, setBackupVersion] = useState(0)
+  const needsBackup = useMemo(() => backupDue(trips), [trips, backupVersion]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleExport = async () => {
     const data = await carnet.exportBackup()
-    const url = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' }))
-    const a = Object.assign(document.createElement('a'), {
-      href: url,
-      download: `carnet-de-route-${new Date().toISOString().slice(0, 10)}.json`,
-    })
-    a.click()
-    URL.revokeObjectURL(url)
+    const blob = new Blob([JSON.stringify(data)], { type: 'application/json' })
+    if (await saveFile(blob, `carnet-de-route-${new Date().toISOString().slice(0, 10)}.json`)) {
+      markBackup()
+      setBackupVersion((v) => v + 1)
+      setToast('Sauvegarde créée. Garde ce fichier en lieu sûr (Drive, Fichiers…).')
+    }
   }
 
   const handleImport = async (file) => {
@@ -125,7 +129,10 @@ export default function App() {
       >
         <Icon name="menu" />
         <span className="etiquette hidden sm:inline">Carnet de route</span>
+        {needsBackup && <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full border-2 border-surface bg-bleu" aria-label="Sauvegarde conseillée" />}
       </button>
+
+      {!mode && !panelVisible && <InstallBanner hasTrips={trips.length > 0} />}
 
       {/* Bandeau du mode placement */}
       {mode && (
@@ -207,6 +214,7 @@ export default function App() {
           trips={trips}
           photos={photos}
           numbers={numbers}
+          needsBackup={needsBackup}
           onSelect={openTrip}
           onClose={() => setCatalogOpen(false)}
           onExport={handleExport}
