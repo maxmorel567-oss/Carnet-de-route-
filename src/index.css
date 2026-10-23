@@ -260,3 +260,25 @@ body {
   background: var(--bleu);
   color: var(--sur-bleu);
 }
+
+/* Trajet du voyage ouvert */
+.trajet {
+  fill: none;
+  stroke: var(--bleu);
+  stroke-width: 2.5;
+  stroke-dasharray: 6 7;
+  stroke-linecap: round;
+}
+.etape-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 9999px;
+  background: var(--bleu);
+  color: var(--sur-bleu);
+  border: 2px solid var(--surface);
+  font: 700 11px/1 var(--font-mono);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+}

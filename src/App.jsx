@@ -3,6 +3,8 @@ import { useCarnet } from './hooks/useCarnet.js'
 import { placeName } from './lib/geocode.js'
 import { currentPosition } from './lib/position.js'
 import { backupDue, markBackup, saveFile } from './lib/backup.js'
+import { tripStops } from './lib/geo.js'
+import { newId } from './lib/id.js'
 import MapView from './components/MapView.jsx'
 import TripPanel from './components/TripPanel.jsx'
 import Lightbox from './components/Lightbox.jsx'
@@ -12,7 +14,13 @@ import Catalog from './components/Catalog.jsx'
 import Icon from './components/Icon.jsx'
 import InstallBanner from './components/InstallBanner.jsx'
 
-// mode : null | { type: 'voyage' } (placer un voyage) | { type: 'photo', photoId }
+// mode : null | { type: 'voyage' } (placer un voyage) | { type: 'photo', photoId } | { type: 'etape', tripId }
+const BANNER = {
+  voyage: 'Touche la carte pour placer le voyage.',
+  photo: 'Touche la carte là où la photo a été prise.',
+  etape: "Touche la carte pour ajouter l'étape.",
+}
+
 export default function App() {
   const carnet = useCarnet()
   const { trips, photos, numbers } = carnet
@@ -21,13 +29,14 @@ export default function App() {
   const [photoId, setPhotoId] = useState(null)
   const [mode, setMode] = useState(null)
   const [catalogOpen, setCatalogOpen] = useState(false)
-  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchFor, setSearchFor] = useState(null) // null | { type: 'voyage' } | { type: 'etape', tripId }
   const [focus, setFocus] = useState(null)
   const [toast, setToast] = useState('')
   const [myPosition, setMyPosition] = useState(null)
   const [activeTag, setActiveTag] = useState(null)
 
   const selected = trips.find((t) => t.id === selectedId)
+  const route = useMemo(() => (selected?.stops?.length ? tripStops(selected) : null), [selected])
   const allTags = useMemo(() => [...new Set(trips.flatMap((t) => t.tags ?? []))].sort((a, b) => a.localeCompare(b, 'fr')), [trips])
   // Filtre par étiquette : la carte ne montre que les voyages concernés et leurs photos.
   const shownTrips = useMemo(() => (activeTag ? trips.filter((t) => t.tags?.includes(activeTag)) : trips), [trips, activeTag])
@@ -47,12 +56,43 @@ export default function App() {
     return () => clearTimeout(timer)
   }, [toast])
 
-  const openTrip = useCallback((trip, zoom) => {
-    setSelectedId(trip.id)
-    setMode(null)
-    setCatalogOpen(false)
-    setFocus({ lat: trip.place.lat, lng: trip.place.lng, zoom })
+  // Centre sur le voyage ; avec des étapes, cadre tout le trajet.
+  const focusTrip = useCallback((trip, zoom) => {
+    const stops = tripStops(trip)
+    setFocus(stops.length > 1 ? { bounds: stops.map((s) => [s.lat, s.lng]) } : { lat: trip.place.lat, lng: trip.place.lng, zoom })
   }, [])
+
+  const openTrip = useCallback(
+    (trip, zoom) => {
+      setSelectedId(trip.id)
+      setMode(null)
+      setCatalogOpen(false)
+      focusTrip(trip, zoom)
+    },
+    [focusTrip],
+  )
+
+  const addStop = async (tripId, { name, lat, lng }) => {
+    const trip = trips.find((t) => t.id === tripId)
+    if (!trip) return
+    const stops = [...(trip.stops ?? []), { id: newId(), name, lat, lng }]
+    await carnet.updateTrip(tripId, { stops })
+    focusTrip({ ...trip, stops })
+    setToast(`Étape ajoutée : ${name}`)
+  }
+
+  const handleAddStop = async (how) => {
+    if (how === 'recherche') return setSearchFor({ type: 'etape', tripId: selectedId })
+    if (how === 'carte') return setMode({ type: 'etape', tripId: selectedId })
+    setToast('Recherche de ta position…')
+    try {
+      const pos = await currentPosition()
+      setMyPosition(pos)
+      await addStop(selectedId, { name: await placeName(pos.lat, pos.lng), lat: pos.lat, lng: pos.lng })
+    } catch (e) {
+      setToast(e.message)
+    }
+  }
 
   const addTripAt = async (lat, lng, name) => {
     const trip = await carnet.createTrip({ name: name ?? (await placeName(lat, lng)), lat, lng })
@@ -76,6 +116,9 @@ export default function App() {
     if (mode?.type === 'voyage') {
       setMode(null)
       await addTripAt(lat, lng)
+    } else if (mode?.type === 'etape') {
+      setMode(null)
+      await addStop(mode.tripId, { name: await placeName(lat, lng), lat, lng })
     } else if (mode?.type === 'photo') {
       setMode(null)
       await carnet.placePhoto(mode.photoId, lat, lng)
@@ -121,6 +164,7 @@ export default function App() {
         photos={shownPhotos}
         selectedId={selectedId}
         myPosition={myPosition}
+        route={route}
         focus={focus}
         onMapClick={handleMapClick}
         onSelectTrip={(id) => openTrip(trips.find((t) => t.id === id))}
@@ -158,7 +202,7 @@ export default function App() {
       {mode && (
         <div className="glisse fixed top-16 left-1/2 z-[950] flex w-[calc(100%-2rem)] max-w-[420px] -translate-x-1/2 items-center justify-between gap-3 rounded-[8px] border border-trait bg-surface px-4 py-3 shadow-lg">
           <span className="text-sm">
-            {mode.type === 'voyage' ? 'Touche la carte pour placer le voyage.' : 'Touche la carte là où la photo a été prise.'}
+            {BANNER[mode.type]}
           </span>
           <button onClick={() => setMode(null)} className="etiquette shrink-0 text-bleu">
             Annuler
@@ -180,7 +224,7 @@ export default function App() {
             setSelectedId(null)
             setMode({ type: 'voyage' })
           }}
-          onSearch={() => setSearchOpen(true)}
+          onSearch={() => setSearchFor({ type: 'voyage' })}
           onHere={addTripHere}
         />
       )}
@@ -193,6 +237,8 @@ export default function App() {
           photos={tripPhotos}
           knownTags={allTags}
           onUpdate={(fields) => carnet.updateTrip(selected.id, fields)}
+          onStopsChange={(stops) => carnet.updateTrip(selected.id, { stops })}
+          onAddStop={handleAddStop}
           onDelete={async () => {
             await carnet.removeTrip(selected.id)
             setSelectedId(null)
@@ -226,12 +272,14 @@ export default function App() {
         />
       )}
 
-      {searchOpen && (
+      {searchFor && (
         <SearchDialog
-          onClose={() => setSearchOpen(false)}
+          title={searchFor.type === 'etape' ? 'Ajouter une étape' : 'Nouveau voyage'}
+          onClose={() => setSearchFor(null)}
           onPick={async (r) => {
-            setSearchOpen(false)
-            await addTripAt(r.lat, r.lng, r.name)
+            setSearchFor(null)
+            if (searchFor.type === 'etape') await addStop(searchFor.tripId, r)
+            else await addTripAt(r.lat, r.lng, r.name)
           }}
         />
       )}

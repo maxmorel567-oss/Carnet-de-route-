@@ -26,7 +26,7 @@ export default function Catalog({ trips, photos, numbers, tags, activeTag, onTag
     const q = filter.trim().toLowerCase()
     return trips
       .filter((t) => !activeTag || t.tags?.includes(activeTag))
-      .filter((t) => !q || `${t.title} ${t.place.name} ${t.notes} ${(t.tags ?? []).join(' ')}`.toLowerCase().includes(q))
+      .filter((t) => !q || `${t.title} ${t.place.name} ${t.notes} ${(t.tags ?? []).join(' ')} ${(t.stops ?? []).map((s) => s.name).join(' ')}`.toLowerCase().includes(q))
       .sort((a, b) => (b.startDate || '').localeCompare(a.startDate || ''))
   }, [trips, filter, activeTag])
 

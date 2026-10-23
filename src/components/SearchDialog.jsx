@@ -2,7 +2,7 @@ import { useState } from 'react'
 import Icon from './Icon.jsx'
 import { searchPlaces } from '../lib/geocode.js'
 
-export default function SearchDialog({ onPick, onClose }) {
+export default function SearchDialog({ title, onPick, onClose }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState(null)
   const [error, setError] = useState('')
@@ -29,6 +29,7 @@ export default function SearchDialog({ onPick, onClose }) {
         role="dialog"
         aria-label="Rechercher une adresse"
       >
+        <p className="etiquette mb-2 text-bleu">{title}</p>
         <form onSubmit={submit} className="flex gap-2">
           <input
             autoFocus

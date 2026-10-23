@@ -103,6 +103,8 @@ const clusterIcon = (cluster) => {
   })
 }
 
+const stopIcon = (n) => L.divIcon({ className: '', html: `<div class="etape-num">${n}</div>`, iconSize: [24, 24] })
+
 const positionIcon = L.divIcon({ className: '', html: '<div class="ma-position"></div>', iconSize: [20, 20] })
 
 const photoIcon = (url, count = 1) =>
@@ -121,12 +123,13 @@ const photoClusterIcon = (cluster) =>
  * Carte plein écran. Leaflet est piloté directement (hors React) pour gérer
  * le regroupement des épingles et les vignettes photo.
  */
-export default function MapView({ trips, photos, selectedId, myPosition, onSelectTrip, onSelectPhoto, onMapClick, focus }) {
+export default function MapView({ trips, photos, selectedId, myPosition, route, onSelectTrip, onSelectPhoto, onMapClick, focus }) {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
   const clusterRef = useRef(null)
   const photoLayerRef = useRef(null)
   const positionLayerRef = useRef(null)
+  const routeLayerRef = useRef(null)
   const handlers = useRef({})
   handlers.current = { onSelectTrip, onSelectPhoto, onMapClick }
 
@@ -137,6 +140,7 @@ export default function MapView({ trips, photos, selectedId, myPosition, onSelec
     map.attributionControl.setPrefix(false)
     const removeBase = addBaseLayer(map)
     positionLayerRef.current = L.layerGroup().addTo(map)
+    routeLayerRef.current = L.layerGroup().addTo(map)
 
     clusterRef.current = L.markerClusterGroup({
       showCoverageOnHover: false,
@@ -209,12 +213,31 @@ export default function MapView({ trips, photos, selectedId, myPosition, onSelec
     L.marker([lat, lng], { icon: positionIcon, interactive: false, zIndexOffset: -100 }).addTo(layer)
   }, [myPosition])
 
+  // Trajet du voyage ouvert : ligne pointillée + étapes numérotées (la n°1 est la punaise)
+  useEffect(() => {
+    const layer = routeLayerRef.current
+    layer.clearLayers()
+    if (!route) return
+    const points = route.map((s) => [s.lat, s.lng])
+    L.polyline(points, { className: 'trajet', interactive: false }).addTo(layer)
+    points.slice(1).forEach((p, i) => L.marker(p, { icon: stopIcon(i + 2), interactive: false, zIndexOffset: -50 }).addTo(layer))
+  }, [route])
+
   // Centrage demandé par l'application, décalé pour rester visible à côté du panneau
   useEffect(() => {
     if (!focus) return
     const map = mapRef.current
-    const zoom = focus.zoom ?? Math.max(map.getZoom(), 10)
     const desktop = window.innerWidth >= 768
+    if (focus.bounds) {
+      map.flyToBounds(focus.bounds, {
+        paddingTopLeft: [40, 80],
+        paddingBottomRight: desktop ? [470, 40] : [40, window.innerHeight * 0.6],
+        maxZoom: 12,
+        duration: 0.8,
+      })
+      return
+    }
+    const zoom = focus.zoom ?? Math.max(map.getZoom(), 10)
     const offset = focus.offset === false ? [0, 0] : desktop ? [210, 0] : [0, window.innerHeight * 0.25]
     const point = map.project([focus.lat, focus.lng], zoom).add(offset)
     map.flyTo(map.unproject(point, zoom), zoom, { duration: 0.8 })

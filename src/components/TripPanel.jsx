@@ -3,6 +3,7 @@ import Icon from './Icon.jsx'
 import Plaque from './Plaque.jsx'
 import PhotoGrid from './PhotoGrid.jsx'
 import { TagEditor } from './Tags.jsx'
+import Stops from './Stops.jsx'
 
 const SAVE_DELAY = 500
 const FIELDS = ['title', 'startDate', 'endDate', 'notes', 'tags']
@@ -13,7 +14,7 @@ const pick = (trip) => Object.fromEntries(FIELDS.map((f) => [f, trip[f]]))
  * Tous les champs sont modifiables directement et enregistrés automatiquement.
  * Monté avec key={trip.id} : le brouillon repart de zéro à chaque voyage.
  */
-export default function TripPanel({ trip, number, photos, knownTags, onUpdate, onDelete, onClose, onAddPhotos, onOpenPhoto }) {
+export default function TripPanel({ trip, number, photos, knownTags, onUpdate, onStopsChange, onAddStop, onDelete, onClose, onAddPhotos, onOpenPhoto }) {
   // Brouillon des seuls champs modifiés ici ; onUpdate(champs) les fusionne dans le voyage.
   const [draft, setDraft] = useState(() => pick(trip))
   const [busy, setBusy] = useState(false)
@@ -114,6 +115,8 @@ export default function TripPanel({ trip, number, photos, knownTags, onUpdate, o
             <input type="date" value={draft.endDate} min={draft.startDate} onChange={set('endDate')} className="champ mt-1" />
           </label>
         </div>
+
+        <Stops trip={trip} onChange={onStopsChange} onAdd={onAddStop} />
 
         <div className="mt-6">
           <span className="etiquette text-encre-muette">Étiquettes</span>
