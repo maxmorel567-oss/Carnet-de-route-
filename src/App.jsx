@@ -171,7 +171,7 @@ export default function App() {
           trip={selected}
           number={numbers[selected.id]}
           photos={tripPhotos}
-          onUpdate={carnet.updateTrip}
+          onUpdate={(fields) => carnet.updateTrip(selected.id, fields)}
           onDelete={async () => {
             await carnet.removeTrip(selected.id)
             setSelectedId(null)
@@ -186,7 +186,13 @@ export default function App() {
         <Lightbox
           photos={tripPhotos}
           photoId={photoId}
+          coverId={(tripPhotos.find((p) => p.id === selected?.coverId) ?? tripPhotos[0])?.id}
           onChange={setPhotoId}
+          onCaption={(id, caption) => carnet.updatePhoto(id, { caption })}
+          onSetCover={(id) => {
+            carnet.updateTrip(selected.id, { coverId: id })
+            setToast('Photo de couverture choisie.')
+          }}
           onClose={() => setPhotoId(null)}
           onPlace={(id) => {
             setPhotoId(null)

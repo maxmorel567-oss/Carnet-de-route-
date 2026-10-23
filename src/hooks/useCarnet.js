@@ -25,6 +25,8 @@ export function useCarnet() {
   const [trips, setTrips] = useState([])
   const [rawPhotos, setRawPhotos] = useState([])
   const [loading, setLoading] = useState(true)
+  const tripsRef = useRef(trips)
+  tripsRef.current = trips
 
   const reload = useCallback(async () => {
     const [t, p] = await Promise.all([store.listTrips(), store.listPhotos()])
@@ -66,14 +68,13 @@ export function useCarnet() {
     [reload],
   )
 
-  const updateTrip = useCallback(
-    async (trip) => {
-      // Mise à jour immédiate de l'écran, puis enregistrement.
-      setTrips((list) => list.map((t) => (t.id === trip.id ? trip : t)))
-      await store.saveTrip(trip)
-    },
-    [],
-  )
+  // Fusionne quelques champs dans le voyage : deux écrans peuvent modifier des champs différents sans s'écraser.
+  const updateTrip = useCallback(async (id, patch) => {
+    const current = tripsRef.current.find((t) => t.id === id)
+    if (!current) return
+    setTrips((list) => list.map((t) => (t.id === id ? { ...t, ...patch } : t)))
+    await store.saveTrip({ ...current, ...patch })
+  }, [])
 
   const removeTrip = useCallback(
     async (id) => {
@@ -105,14 +106,19 @@ export function useCarnet() {
     [trips, reload],
   )
 
-  const placePhoto = useCallback(
-    async (photoId, lat, lng) => {
+  const updatePhoto = useCallback(
+    async (photoId, patch) => {
       const photo = rawPhotos.find((p) => p.id === photoId)
       if (!photo) return
-      await store.savePhoto({ ...photo, lat, lng, gpsSource: 'manuel' })
+      await store.savePhoto({ ...photo, ...patch })
       await reload()
     },
     [rawPhotos, reload],
+  )
+
+  const placePhoto = useCallback(
+    (photoId, lat, lng) => updatePhoto(photoId, { lat, lng, gpsSource: 'manuel' }),
+    [updatePhoto],
   )
 
   const removePhoto = useCallback(
@@ -141,6 +147,7 @@ export function useCarnet() {
     updateTrip,
     removeTrip,
     addPhotos,
+    updatePhoto,
     placePhoto,
     removePhoto,
     exportBackup: store.exportAll,

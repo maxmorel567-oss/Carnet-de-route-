@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Icon from './Icon.jsx'
 
 const fmt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long', timeStyle: 'short' })
@@ -9,8 +9,33 @@ const POSITION = {
   position: 'Position du voyage (GPS du téléphone)',
 }
 
+// Légende d'une photo : enregistrée en quittant le champ ou en changeant de photo.
+function Caption({ photo, onSave }) {
+  const [text, setText] = useState(photo.caption ?? '')
+  const latest = useRef(text)
+  const saved = useRef(text) // dernière valeur enregistrée : évite un second enregistrement à la fermeture
+  latest.current = text
+  const save = () => {
+    if (latest.current === saved.current) return
+    saved.current = latest.current
+    onSave(photo.id, latest.current.trim())
+  }
+  useEffect(() => save, []) // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <input
+      value={text}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={save}
+      onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+      placeholder="Ajouter une légende…"
+      aria-label="Légende"
+      className="w-full rounded-[8px] border border-white/15 bg-white/5 px-3 py-2 text-base text-[#F3EEE6] outline-none placeholder:text-[#A39A8C] focus:border-[#6B9BE6]"
+    />
+  )
+}
+
 // Visionneuse plein écran, navigation flèches / clavier.
-export default function Lightbox({ photos, photoId, onChange, onClose, onPlace, onDelete }) {
+export default function Lightbox({ photos, photoId, coverId, onChange, onClose, onPlace, onDelete, onCaption, onSetCover }) {
   const index = photos.findIndex((p) => p.id === photoId)
   const photo = photos[index]
   const go = (step) => onChange(photos[(index + step + photos.length) % photos.length].id)
@@ -18,6 +43,7 @@ export default function Lightbox({ photos, photoId, onChange, onClose, onPlace, 
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === 'Escape') onClose()
+      if (e.target.tagName === 'INPUT') return // flèches = déplacement du curseur dans la légende
       if (e.key === 'ArrowLeft') go(-1)
       if (e.key === 'ArrowRight') go(1)
     }
@@ -57,11 +83,20 @@ export default function Lightbox({ photos, photoId, onChange, onClose, onPlace, 
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-4 [padding-bottom:max(1rem,env(safe-area-inset-bottom))]">
+        <Caption key={photo.id} photo={photo} onSave={onCaption} />
         <div className="text-sm">
           {photo.takenAt && <div>{fmt.format(photo.takenAt)}</div>}
           <div className="text-[#C9C1B4]">{POSITION[photo.gpsSource] ?? 'Pas encore placée sur la carte'}</div>
         </div>
         <div className="flex gap-2">
+          <button
+            onClick={() => onSetCover(photo.id)}
+            disabled={photo.id === coverId}
+            className="flex items-center gap-1 rounded-[8px] border border-white/20 px-3 py-2 text-sm disabled:border-transparent disabled:text-[#A39A8C]"
+          >
+            <Icon name="image" size={16} />
+            {photo.id === coverId ? 'Couverture' : 'Mettre en couverture'}
+          </button>
           <button
             onClick={() => onPlace(photo.id)}
             className="flex items-center gap-1 rounded-[8px] bg-[#6B9BE6] px-4 py-2 text-sm font-medium text-[#121418]"

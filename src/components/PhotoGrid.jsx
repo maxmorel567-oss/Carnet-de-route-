@@ -1,4 +1,4 @@
-export default function PhotoGrid({ photos, onOpen }) {
+export default function PhotoGrid({ photos, coverId, onOpen }) {
   if (!photos.length) {
     return (
       <div className="mt-3 rounded-[8px] bg-photo-vide px-4 py-8 text-center text-sm text-encre-douce">
@@ -15,6 +15,9 @@ export default function PhotoGrid({ photos, onOpen }) {
           className="glisse relative aspect-square overflow-hidden rounded-[8px] bg-photo-vide"
         >
           <img src={p.thumbUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
+          {p.id === coverId && (
+            <span className="etiquette absolute top-1 left-1 rounded-[4px] bg-surface/90 px-1 text-[10px] text-encre">Couv.</span>
+          )}
           {p.lat == null && (
             <span className="etiquette absolute bottom-1 left-1 rounded-[4px] bg-surface/90 px-1 text-[10px] text-encre">
               Sans GPS

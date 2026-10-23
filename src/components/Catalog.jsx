@@ -8,11 +8,18 @@ export default function Catalog({ trips, photos, numbers, needsBackup, onSelect,
   const [filter, setFilter] = useState('')
   const fileInput = useRef(null)
 
-  const photoCount = useMemo(() => {
+  // Nombre de photos et vignette de couverture par voyage
+  const { photoCount, covers } = useMemo(() => {
     const counts = {}
-    photos.forEach((p) => (counts[p.tripId] = (counts[p.tripId] ?? 0) + 1))
-    return counts
-  }, [photos])
+    const firsts = {}
+    photos.forEach((p) => {
+      counts[p.tripId] = (counts[p.tripId] ?? 0) + 1
+      firsts[p.tripId] ??= p
+    })
+    const byId = Object.fromEntries(photos.map((p) => [p.id, p]))
+    const coverOf = Object.fromEntries(trips.map((t) => [t.id, byId[t.coverId] ?? firsts[t.id]]))
+    return { photoCount: counts, covers: coverOf }
+  }, [photos, trips])
 
   const list = useMemo(() => {
     const q = filter.trim().toLowerCase()
@@ -66,14 +73,22 @@ export default function Catalog({ trips, photos, numbers, needsBackup, onSelect,
                 onClick={() => onSelect(t)}
                 className="flex w-full gap-3 rounded-[8px] px-3 py-3 text-left hover:bg-bois"
               >
-                <span className="etiquette mt-1 shrink-0 text-encre-muette">{padNumber(numbers[t.id])}</span>
+                {covers[t.id] ? (
+                  <img src={covers[t.id].thumbUrl} alt="" className="h-12 w-12 shrink-0 rounded-[8px] object-cover" />
+                ) : (
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[8px] bg-photo-vide text-encre-muette">
+                    <Icon name="pin" size={18} />
+                  </span>
+                )}
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-medium">{t.title || 'Sans titre'}</span>
                   <span className="block truncate text-sm text-encre-douce">
                     {t.place.name} · {formatDates(t.startDate, t.endDate)}
                   </span>
                 </span>
-                <span className="mt-1 shrink-0 font-mono text-xs text-encre-muette">
+                <span className="mt-1 shrink-0 text-right font-mono text-xs leading-5 text-encre-muette">
+                  N°&nbsp;{padNumber(numbers[t.id])}
+                  <br />
                   {photoCount[t.id] ?? 0}&nbsp;ph.
                 </span>
               </button>

@@ -4,6 +4,8 @@ import Plaque from './Plaque.jsx'
 import PhotoGrid from './PhotoGrid.jsx'
 
 const SAVE_DELAY = 500
+const FIELDS = ['title', 'startDate', 'endDate', 'notes']
+const pick = (trip) => Object.fromEntries(FIELDS.map((f) => [f, trip[f]]))
 
 /**
  * Fiche d'un voyage : panneau à droite sur ordinateur, tiroir en bas sur téléphone.
@@ -11,14 +13,17 @@ const SAVE_DELAY = 500
  * Monté avec key={trip.id} : le brouillon repart de zéro à chaque voyage.
  */
 export default function TripPanel({ trip, number, photos, onUpdate, onDelete, onClose, onAddPhotos, onOpenPhoto }) {
-  const [draft, setDraft] = useState(trip)
+  // Brouillon des seuls champs modifiés ici ; onUpdate(champs) les fusionne dans le voyage.
+  const [draft, setDraft] = useState(() => pick(trip))
   const [busy, setBusy] = useState(false)
   const pending = useRef(null)
+  const dirty = useRef(false)
   const fileInput = useRef(null)
+  const cover = photos.find((p) => p.id === trip.coverId) ?? photos[0]
 
   // Enregistrement différé après la frappe, et forcé à la fermeture.
   useEffect(() => {
-    if (draft === trip) return
+    if (!dirty.current) return
     pending.current = draft
     const timer = setTimeout(() => {
       onUpdate(draft)
@@ -31,6 +36,7 @@ export default function TripPanel({ trip, number, photos, onUpdate, onDelete, on
 
   const set = (field) => (e) => {
     const value = e.target.value
+    dirty.current = true
     setDraft((d) => {
       const next = { ...d, [field]: value }
       // Une fin avant le début n'a pas de sens : on l'aligne.
@@ -51,6 +57,7 @@ export default function TripPanel({ trip, number, photos, onUpdate, onDelete, on
   const confirmDelete = () => {
     if (!confirm(`Supprimer « ${draft.title} » et ses ${photos.length} photo(s) ? C'est définitif.`)) return
     pending.current = null // sinon l'enregistrement à la fermeture recréerait le voyage
+    dirty.current = false
     onDelete()
   }
 
@@ -73,6 +80,11 @@ export default function TripPanel({ trip, number, photos, onUpdate, onDelete, on
       </div>
 
       <div className="overflow-y-auto px-6 pb-8 [padding-bottom:max(2rem,env(safe-area-inset-bottom))]">
+        {cover && (
+          <button onClick={() => onOpenPhoto(cover.id)} className="mb-4 block w-full overflow-hidden rounded-[8px]" aria-label="Voir la photo de couverture">
+            <img src={cover.url} alt="" className="glisse h-40 w-full object-cover md:h-48" />
+          </button>
+        )}
         <Plaque number={number} startDate={draft.startDate} endDate={draft.endDate} photoCount={photos.length} />
 
         <input
@@ -83,7 +95,7 @@ export default function TripPanel({ trip, number, photos, onUpdate, onDelete, on
         />
         <p className="mt-2 flex items-center gap-1 text-sm text-encre-douce">
           <Icon name="pin" size={16} className="shrink-0 text-bleu" />
-          {draft.place.name}
+          {trip.place.name}
         </p>
 
         <div className="mt-6 grid grid-cols-2 gap-3">
@@ -120,7 +132,7 @@ export default function TripPanel({ trip, number, photos, onUpdate, onDelete, on
           </button>
           <input ref={fileInput} type="file" accept="image/*" multiple hidden onChange={handleFiles} />
         </div>
-        <PhotoGrid photos={photos} onOpen={onOpenPhoto} />
+        <PhotoGrid photos={photos} coverId={cover?.id} onOpen={onOpenPhoto} />
 
         <button
           onClick={confirmDelete}
