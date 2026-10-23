@@ -3,13 +3,14 @@ import Icon from './Icon.jsx'
 import { formatDates, padNumber } from '../lib/format.js'
 import { formatLastBackup } from '../lib/backup.js'
 import { Chip } from './Tags.jsx'
+import Stats from './Stats.jsx'
 
 // Menu latéral : catalogue textuel des voyages + sauvegarde.
 const countryNames = new Intl.DisplayNames(['fr'], { type: 'region' })
 
 export default function Catalog({ trips, wishes = [], photos, numbers, tags, visited = [], activeTag, onTag, needsBackup, onSelect, onClose, onExport, onImport }) {
   const [filter, setFilter] = useState('')
-  const [view, setView] = useState('liste') // 'liste' | 'frise' | 'souhaits'
+  const [view, setView] = useState('liste') // 'liste' | 'frise' | 'souhaits' | 'stats'
   const [favOnly, setFavOnly] = useState(false)
   const fileInput = useRef(null)
 
@@ -118,18 +119,19 @@ export default function Catalog({ trips, wishes = [], photos, numbers, tags, vis
             placeholder="Filtrer…"
             className="champ mt-4 bg-surface"
           />
-          <div className="mt-3 grid grid-cols-3 rounded-[8px] border border-trait bg-surface p-0.5" role="tablist" aria-label="Affichage">
+          <div className="mt-3 grid grid-cols-4 rounded-[8px] border border-trait bg-surface p-0.5" role="tablist" aria-label="Affichage">
             {[
               ['liste', 'Liste'],
               ['frise', 'Frise'],
-              ['souhaits', `Souhaits${wishes.length ? ` (${wishes.length})` : ''}`],
+              ['souhaits', 'Souhaits'],
+              ['stats', 'Stats'],
             ].map(([id, label]) => (
               <button
                 key={id}
                 role="tab"
                 aria-selected={view === id}
                 onClick={() => setView(id)}
-                className={`etiquette rounded-[6px] py-1.5 ${view === id ? 'bg-bleu text-sur-bleu' : 'text-encre-douce'}`}
+                className={`etiquette rounded-[6px] py-1.5 text-[11px] tracking-[0.04em] ${view === id ? 'bg-bleu text-sur-bleu' : 'text-encre-douce'}`}
               >
                 {label}
               </button>
@@ -147,7 +149,12 @@ export default function Catalog({ trips, wishes = [], photos, numbers, tags, vis
         </header>
 
         <ul className="flex-1 overflow-y-auto px-3 py-3">
-          {view !== 'souhaits' && list.length === 0 && (
+          {view === 'stats' && (
+            <li>
+              <Stats trips={trips} photos={photos.filter((p) => trips.some((t) => t.id === p.tripId))} visited={visited} />
+            </li>
+          )}
+          {(view === 'liste' || view === 'frise') && list.length === 0 && (
             <li className="px-3 py-4 text-sm text-encre-douce">
               {trips.length ? 'Aucun voyage ne correspond.' : 'Aucun voyage pour le moment.'}
             </li>

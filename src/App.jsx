@@ -16,6 +16,7 @@ import InstallBanner from './components/InstallBanner.jsx'
 import Slideshow from './components/Slideshow.jsx'
 import WishPanel from './components/WishPanel.jsx'
 import { todayIso } from './lib/format.js'
+import { anniversarySeen, findAnniversary, markAnniversarySeen } from './lib/souvenir.js'
 
 // mode : null | { type: 'voyage' } (placer un voyage) | { type: 'photo', photoId } | { type: 'etape', tripId }
 const BANNER = {
@@ -41,6 +42,7 @@ export default function App() {
   const [myPosition, setMyPosition] = useState(null)
   const [activeTag, setActiveTag] = useState(null)
   const [slideshow, setSlideshow] = useState(false)
+  const [souvenirHidden, setSouvenirHidden] = useState(anniversarySeen)
 
   const selected = carnet.trips.find((t) => t.id === selectedId)
   const route = useMemo(() => (selected?.stops?.length ? tripStops(selected) : null), [selected])
@@ -185,6 +187,11 @@ export default function App() {
   }
 
   const panelVisible = selected && !mode
+  const souvenir = useMemo(() => (souvenirHidden ? null : findAnniversary(trips)), [trips, souvenirHidden])
+  const closeSouvenir = () => {
+    markAnniversarySeen()
+    setSouvenirHidden(true)
+  }
 
   return (
     <div className={`relative h-full overflow-hidden ${mode ? 'mode-placement' : ''}`}>
@@ -245,6 +252,39 @@ export default function App() {
         <div className="glisse fixed bottom-28 left-1/2 z-[800] w-[calc(100%-2rem)] max-w-[360px] -translate-x-1/2 rounded-[12px] border border-trait bg-surface p-4 text-center shadow-lg">
           <p className="font-mono font-bold">Première escale ?</p>
           <p className="mt-1 text-sm text-encre-douce">Appuie sur + pour épingler ta première destination.</p>
+        </div>
+      )}
+
+      {souvenir && !panelVisible && !mode && (
+        <div className="glisse fixed bottom-28 left-1/2 z-[800] flex w-[calc(100%-2rem)] max-w-[380px] -translate-x-1/2 items-center gap-3 rounded-[12px] border border-trait bg-surface p-3 shadow-lg">
+          {(() => {
+            const cover = photos.find((p) => p.id === souvenir.trip.coverId) ?? photos.find((p) => p.tripId === souvenir.trip.id)
+            return cover ? (
+              <img src={cover.thumbUrl} alt="" className="h-14 w-14 shrink-0 rounded-[8px] object-cover" />
+            ) : (
+              <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[8px] bg-photo-vide text-encre-muette">
+                <Icon name="pin" />
+              </span>
+            )
+          })()}
+          <div className="min-w-0 flex-1">
+            <p className="etiquette text-bleu">
+              Il y a {souvenir.years}&nbsp;an{souvenir.years > 1 ? 's' : ''}
+            </p>
+            <p className="truncate font-medium">{souvenir.trip.title}</p>
+            <button
+              onClick={() => {
+                closeSouvenir()
+                openTrip(souvenir.trip)
+              }}
+              className="text-sm font-medium text-bleu"
+            >
+              Revoir ce voyage
+            </button>
+          </div>
+          <button onClick={closeSouvenir} className="self-start rounded-[8px] p-1 text-encre-muette hover:text-encre" aria-label="Fermer le souvenir">
+            <Icon name="close" size={18} />
+          </button>
         </div>
       )}
 
