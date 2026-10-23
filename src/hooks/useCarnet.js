@@ -89,13 +89,15 @@ export function useCarnet() {
     [reload],
   )
 
+  // inspiration : images d'une idée de voyage (pas tes photos) : jamais placées sur la carte
   const addPhotos = useCallback(
-    async (tripId, files) => {
+    async (tripId, files, { inspiration = false } = {}) => {
       const trip = trips.find((t) => t.id === tripId)
       const errors = []
       for (const file of files) {
         try {
           const data = await processImage(file)
+          if (inspiration) Object.assign(data, { inspiration: true, lat: null, lng: null, gpsSource: null })
           // Photo sans GPS (fréquent sur iPhone) dans un voyage créé à ma position : on la place là.
           if (data.lat == null && trip?.place.precise) {
             Object.assign(data, { lat: trip.place.lat, lng: trip.place.lng, gpsSource: 'position' })

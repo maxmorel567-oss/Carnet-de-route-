@@ -26,8 +26,8 @@ export default function AddButton({ onPickOnMap, onSearch, onHere, onWish, class
             Rechercher une adresse
           </button>
           <button onClick={choose(onWish)} className="option-flottante">
-            <Icon name="heart" size={18} className="text-bleu" />
-            Lieu à visiter
+            <Icon name="flag" size={18} className="text-bleu" />
+            Idée de voyage
           </button>
         </div>
       )}

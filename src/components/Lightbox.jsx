@@ -35,7 +35,8 @@ function Caption({ photo, onSave }) {
 }
 
 // Visionneuse plein écran, navigation flèches / clavier.
-export default function Lightbox({ photos, photoId, coverId, onChange, onClose, onPlace, onDelete, onCaption, onSetCover }) {
+// inspiration : images d'une idée de voyage (ni couverture, ni placement sur la carte)
+export default function Lightbox({ photos, photoId, coverId, inspiration = false, onChange, onClose, onPlace, onDelete, onCaption, onSetCover }) {
   const index = photos.findIndex((p) => p.id === photoId)
   const photo = photos[index]
   const go = (step) => onChange(photos[(index + step + photos.length) % photos.length].id)
@@ -84,11 +85,14 @@ export default function Lightbox({ photos, photoId, coverId, onChange, onClose, 
 
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-4 [padding-bottom:max(1rem,env(safe-area-inset-bottom))]">
         <Caption key={photo.id} photo={photo} onSave={onCaption} />
-        <div className="text-sm">
-          {photo.takenAt && <div>{fmt.format(photo.takenAt)}</div>}
-          <div className="text-[#C9C1B4]">{POSITION[photo.gpsSource] ?? 'Pas encore placée sur la carte'}</div>
-        </div>
+        {!inspiration && (
+          <div className="text-sm">
+            {photo.takenAt && <div>{fmt.format(photo.takenAt)}</div>}
+            <div className="text-[#C9C1B4]">{POSITION[photo.gpsSource] ?? 'Pas encore placée sur la carte'}</div>
+          </div>
+        )}
         <div className="flex gap-2">
+          {!inspiration && (<>
           <button
             onClick={() => onSetCover(photo.id)}
             disabled={photo.id === coverId}
@@ -104,6 +108,7 @@ export default function Lightbox({ photos, photoId, coverId, onChange, onClose, 
             <Icon name="crosshair" size={16} />
             {photo.lat == null ? 'Placer sur la carte' : 'Déplacer'}
           </button>
+          </>)}
           <button onClick={remove} className="rounded-[8px] p-2 hover:bg-white/10" aria-label="Supprimer la photo">
             <Icon name="trash" />
           </button>

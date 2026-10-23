@@ -5,6 +5,11 @@ import { formatLastBackup } from '../lib/backup.js'
 import { Chip } from './Tags.jsx'
 import Stats from './Stats.jsx'
 import { getTheme, setTheme } from '../lib/theme.js'
+import { DURATIONS, PRIORITIES } from './IdeaPanel.jsx'
+
+const PRIORITY_ORDER = Object.fromEntries(PRIORITIES.map(([id], i) => [id, i]))
+const LABEL = Object.fromEntries([...PRIORITIES, ...DURATIONS])
+const MONTH_SHORT = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.']
 
 // Menu latéral : catalogue textuel des voyages + sauvegarde.
 const countryNames = new Intl.DisplayNames(['fr'], { type: 'region' })
@@ -125,7 +130,7 @@ export default function Catalog({ trips, wishes = [], photos, numbers, tags, vis
             {[
               ['liste', 'Liste'],
               ['frise', 'Frise'],
-              ['souhaits', 'Souhaits'],
+              ['souhaits', 'Idées'],
               ['stats', 'Stats'],
             ].map(([id, label]) => (
               <button
@@ -139,7 +144,7 @@ export default function Catalog({ trips, wishes = [], photos, numbers, tags, vis
               </button>
             ))}
           </div>
-          {(tags.length > 0 || trips.some((t) => t.favorite)) && (
+          {(view === 'liste' || view === 'frise') && (tags.length > 0 || trips.some((t) => t.favorite)) && (
             <div className="mt-3 flex gap-2 overflow-x-auto pb-1" aria-label="Filtrer par étiquette">
               <Chip label="Tous" active={!activeTag && !favOnly} onClick={() => (onTag(null), setFavOnly(false))} />
               {trips.some((t) => t.favorite) && <Chip label="Coups de cœur" active={favOnly} onClick={() => setFavOnly((f) => !f)} />}
@@ -163,21 +168,35 @@ export default function Catalog({ trips, wishes = [], photos, numbers, tags, vis
           )}
           {view === 'souhaits' &&
             (wishes.length ? (
-              wishes.map((w) => (
-                <li key={w.id}>
-                  <button onClick={() => onSelect(w)} className="flex w-full items-center gap-3 rounded-[8px] px-3 py-3 text-left hover:bg-bois">
-                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[8px] bg-bleu text-sur-bleu">
-                      <Icon name="heart" size={20} />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate font-medium">{w.title}</span>
-                      <span className="block truncate text-sm text-encre-douce">{w.notes || w.place.name}</span>
-                    </span>
-                  </button>
-                </li>
-              ))
+              [...wishes]
+                .sort((a, b) => (PRIORITY_ORDER[a.priority] ?? 9) - (PRIORITY_ORDER[b.priority] ?? 9))
+                .map((w) => {
+                  const done = (w.todo ?? []).filter((x) => x.done).length
+                  const details = [
+                    w.duration && LABEL[w.duration],
+                    w.months?.length && w.months.map((m) => MONTH_SHORT[m - 1]).join(', '),
+                    w.budget != null && `${w.budget}\u00a0€`,
+                    w.todo?.length && `${done}/${w.todo.length} à voir`,
+                  ].filter(Boolean)
+                  return (
+                    <li key={w.id}>
+                      <button onClick={() => onSelect(w)} className="flex w-full items-center gap-3 rounded-[8px] px-3 py-3 text-left hover:bg-bois">
+                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[8px] bg-bleu text-sur-bleu">
+                          <Icon name="flag" size={20} />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-center gap-2">
+                            <span className="truncate font-medium">{w.title}</span>
+                            {w.priority && <span className="etiquette shrink-0 text-bleu">{LABEL[w.priority]}</span>}
+                          </span>
+                          <span className="block truncate text-sm text-encre-douce">{details.join(' · ') || w.place.name}</span>
+                        </span>
+                      </button>
+                    </li>
+                  )
+                })
             ) : (
-              <li className="px-3 py-4 text-sm text-encre-douce">Aucun lieu pour le moment. Ajoute-en avec + puis « Lieu à visiter ».</li>
+              <li className="px-3 py-4 text-sm text-encre-douce">Aucune idée pour le moment. Ajoute-en avec + puis « Idée de voyage ».</li>
             ))}
           {view === 'liste' && list.map((t) => <li key={t.id}>{renderTrip(t)}</li>)}
           {view === 'frise' &&

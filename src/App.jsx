@@ -14,7 +14,7 @@ import Catalog from './components/Catalog.jsx'
 import Icon from './components/Icon.jsx'
 import InstallBanner from './components/InstallBanner.jsx'
 import Slideshow from './components/Slideshow.jsx'
-import WishPanel from './components/WishPanel.jsx'
+import IdeaPanel from './components/IdeaPanel.jsx'
 import SouvenirModal from './components/SouvenirModal.jsx'
 import { todayIso } from './lib/format.js'
 import { anniversarySeen, findAnniversary, markAnniversarySeen } from './lib/souvenir.js'
@@ -29,7 +29,7 @@ const BANNER = {
 export default function App() {
   const carnet = useCarnet()
   const { photos, numbers } = carnet
-  // Voyages faits d'un côté, liste de souhaits de l'autre (même stockage, champ wish)
+  // Voyages faits d'un côté, idées de voyage de l'autre (même stockage, champ wish)
   const trips = useMemo(() => carnet.trips.filter((t) => !t.wish), [carnet.trips])
   const wishes = useMemo(() => carnet.trips.filter((t) => t.wish), [carnet.trips])
 
@@ -51,14 +51,18 @@ export default function App() {
   const allTags = useMemo(() => [...new Set(trips.flatMap((t) => t.tags ?? []))].sort((a, b) => a.localeCompare(b, 'fr')), [trips])
   // Filtre par étiquette : la carte ne montre que les voyages concernés et leurs photos.
   const shownTrips = useMemo(() => (activeTag ? trips.filter((t) => t.tags?.includes(activeTag)) : trips), [trips, activeTag])
+  // Photos de voyage (les images d'inspiration des idées restent à part : ni carte, ni stats, ni galerie)
+  const tripsPhotos = useMemo(() => photos.filter((p) => !p.inspiration), [photos])
   const shownPhotos = useMemo(() => {
-    if (!activeTag) return photos
     const ids = new Set(shownTrips.map((t) => t.id))
-    return photos.filter((p) => ids.has(p.tripId))
-  }, [photos, shownTrips, activeTag])
+    return tripsPhotos.filter((p) => ids.has(p.tripId))
+  }, [tripsPhotos, shownTrips])
   const tripPhotos = useMemo(
-    () => photos.filter((p) => p.tripId === selectedId).sort((a, b) => (a.takenAt ?? a.createdAt) - (b.takenAt ?? b.createdAt)),
-    [photos, selectedId],
+    () =>
+      photos
+        .filter((p) => p.tripId === selectedId && Boolean(p.inspiration) === Boolean(selected?.wish))
+        .sort((a, b) => (a.takenAt ?? a.createdAt) - (b.takenAt ?? b.createdAt)),
+    [photos, selectedId, selected?.wish],
   )
 
   // Pays visités (codes ISO) : départs + étapes de tous les voyages
@@ -304,9 +308,15 @@ export default function App() {
       )}
 
       {panelVisible && selected.wish && (
-        <WishPanel
+        <IdeaPanel
           key={selected.id}
-          wish={selected}
+          idea={selected}
+          photos={tripPhotos}
+          onAddPhotos={async (files) => {
+            const errors = await carnet.addPhotos(selected.id, files, { inspiration: true })
+            if (errors.length) setToast(errors.join(' · '))
+          }}
+          onOpenPhoto={setPhotoId}
           onUpdate={(fields) => carnet.updateTrip(selected.id, fields)}
           onBecomeTrip={async () => {
             await carnet.updateTrip(selected.id, { wish: false, startDate: todayIso(), createdAt: Date.now() })
@@ -346,6 +356,7 @@ export default function App() {
         <Lightbox
           photos={tripPhotos}
           photoId={photoId}
+          inspiration={Boolean(selected?.wish)}
           coverId={(tripPhotos.find((p) => p.id === selected?.coverId) ?? tripPhotos[0])?.id}
           onChange={setPhotoId}
           onCaption={(id, caption) => carnet.updatePhoto(id, { caption })}
@@ -384,7 +395,7 @@ export default function App() {
 
       {searchFor && (
         <SearchDialog
-          title={{ etape: 'Ajouter une étape', souhait: 'Lieu à visiter', voyage: 'Nouveau voyage' }[searchFor.type]}
+          title={{ etape: 'Ajouter une étape', souhait: 'Idée de voyage', voyage: 'Nouveau voyage' }[searchFor.type]}
           onClose={() => setSearchFor(null)}
           onPick={async (r) => {
             setSearchFor(null)
@@ -397,7 +408,7 @@ export default function App() {
       {catalogOpen && (
         <Catalog
           trips={trips}
-          photos={photos}
+          photos={tripsPhotos}
           numbers={numbers}
           needsBackup={needsBackup}
           tags={allTags}

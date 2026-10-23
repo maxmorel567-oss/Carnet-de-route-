@@ -99,6 +99,27 @@ const pinIcon = (active, color = 'rouge', width = 34) =>
     iconAnchor: [Math.round(width * 0.15), Math.round(width * 1.15)],
   })
 
+// Idée de voyage : petit drapeau bleu planté (pied du mât = position)
+let flagCount = 0
+const flagIcon = (active) => {
+  const id = `drapeau${flagCount++}`
+  return L.divIcon({
+    className: '',
+    html: `<div class="epingle${active ? ' active' : ''}"><svg viewBox="0 0 34 48" width="30" height="42" aria-hidden="true">
+      <defs>
+        <linearGradient id="${id}m" x1="0" x2="1"><stop offset="0" stop-color="#8A8F96"/><stop offset=".5" stop-color="#F2F4F6"/><stop offset="1" stop-color="#9BA0A6"/></linearGradient>
+        <linearGradient id="${id}t" x1="0" x2="1"><stop offset="0" stop-color="#1B4583"/><stop offset=".55" stop-color="#2F68BD"/><stop offset="1" stop-color="#2459A8"/></linearGradient>
+      </defs>
+      <ellipse cx="6" cy="46" rx="5" ry="1.4" fill="#000" opacity=".2"/>
+      <rect x="4.6" y="5" width="2.8" height="41" rx="1.4" fill="url(#${id}m)"/>
+      <circle cx="6" cy="4.5" r="2.6" fill="#F2F4F6" stroke="#8A8F96" stroke-width=".8"/>
+      <path d="M7.4 7c7-3.2 12.4 3 20.6-.8 1.2-.5 2 .2 2 1.2v13.2c0 .8-.4 1.3-1.1 1.6-8.2 3.6-13.6-2.6-21.5.8z" fill="url(#${id}t)" stroke="#FFFFFF" stroke-width="1.2" stroke-linejoin="round"/>
+    </svg></div>`,
+    iconSize: [30, 42],
+    iconAnchor: [5, 41],
+  })
+}
+
 // Groupe de voyages : une grande punaise avec le nombre de voyages.
 const clusterIcon = (cluster) => {
   const n = cluster.getChildCount()
@@ -205,12 +226,12 @@ export default function MapView({ trips, wishes = [], photos, selectedId, myPosi
     )
   }, [trips, selectedId])
 
-  // Liste de souhaits : petites punaises bleues, non regroupées
+  // Idées de voyage : drapeaux bleus, non regroupés
   useEffect(() => {
     const layer = wishLayerRef.current
     layer.clearLayers()
     wishes.forEach((w) =>
-      L.marker([w.place.lat, w.place.lng], { icon: pinIcon(w.id === selectedId, 'bleu', 28), title: w.title })
+      L.marker([w.place.lat, w.place.lng], { icon: flagIcon(w.id === selectedId), title: w.title })
         .on('click', () => handlers.current.onSelectTrip(w.id))
         .addTo(layer),
     )
