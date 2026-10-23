@@ -4,6 +4,7 @@ import { formatDates, padNumber } from '../lib/format.js'
 import { formatLastBackup } from '../lib/backup.js'
 import { Chip } from './Tags.jsx'
 import Stats from './Stats.jsx'
+import { getTheme, setTheme } from '../lib/theme.js'
 
 // Menu latéral : catalogue textuel des voyages + sauvegarde.
 const countryNames = new Intl.DisplayNames(['fr'], { type: 'region' })
@@ -12,6 +13,7 @@ export default function Catalog({ trips, wishes = [], photos, numbers, tags, vis
   const [filter, setFilter] = useState('')
   const [view, setView] = useState('liste') // 'liste' | 'frise' | 'souhaits' | 'stats'
   const [favOnly, setFavOnly] = useState(false)
+  const [theme, setThemeState] = useState(getTheme)
   const fileInput = useRef(null)
 
   // Nombre de photos et vignette de couverture par voyage
@@ -199,6 +201,29 @@ export default function Catalog({ trips, wishes = [], photos, numbers, tags, vis
         </ul>
 
         <footer className="grid grid-cols-2 gap-2 border-t border-trait p-4 [padding-bottom:max(1rem,env(safe-area-inset-bottom))]">
+          <div className="col-span-2 mb-1 flex items-center gap-3">
+            <span className="etiquette text-encre-muette">Thème</span>
+            <div className="grid flex-1 grid-cols-3 rounded-[8px] border border-trait bg-surface p-0.5" role="radiogroup" aria-label="Thème">
+              {[
+                ['auto', 'Auto'],
+                ['light', 'Clair'],
+                ['dark', 'Sombre'],
+              ].map(([id, label]) => (
+                <button
+                  key={id}
+                  role="radio"
+                  aria-checked={theme === id}
+                  onClick={() => {
+                    setTheme(id)
+                    setThemeState(id)
+                  }}
+                  className={`etiquette rounded-[6px] py-1 text-[11px] ${theme === id ? 'bg-bleu text-sur-bleu' : 'text-encre-douce'}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
           <p className={`col-span-2 text-sm ${needsBackup ? 'font-medium text-bleu' : 'text-encre-douce'}`}>
             {formatLastBackup()}
             {needsBackup && ' : pense à exporter.'}

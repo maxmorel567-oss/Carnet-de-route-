@@ -21,8 +21,9 @@
   color-scheme: light;
 }
 
+/* Sombre : réglage du téléphone (sauf choix « Clair » dans l'app) ou choix « Sombre » */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --fond: #1C1A17;
     --surface: #262320;
     --bois: #322E29;
@@ -36,6 +37,21 @@
     --photo-vide: #3A352F;
     color-scheme: dark;
   }
+}
+
+:root[data-theme="dark"] {
+  --fond: #1C1A17;
+  --surface: #262320;
+  --bois: #322E29;
+  --trait: #3D3833;
+  --encre: #F3EEE6;
+  --encre-douce: #C9C1B4;
+  --encre-muette: #A39A8C;
+  --bleu: #6B9BE6;
+  --bleu-fort: #9BBCF0;
+  --sur-bleu: #121418;
+  --photo-vide: #3A352F;
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -124,8 +140,9 @@ body {
 /* Tuiles OSM de secours : adoucies ; en sombre, inversées en graphite */
 .tuiles-osm { filter: saturate(0.55) contrast(0.95); }
 @media (prefers-color-scheme: dark) {
-  .tuiles-osm { filter: invert(1) hue-rotate(180deg) saturate(0.4) brightness(0.85) contrast(0.9); }
+  :root:not([data-theme="light"]) .tuiles-osm { filter: invert(1) hue-rotate(180deg) saturate(0.4) brightness(0.85) contrast(0.9); }
 }
+:root[data-theme="dark"] .tuiles-osm { filter: invert(1) hue-rotate(180deg) saturate(0.4) brightness(0.85) contrast(0.9); }
 
 /* Ma position */
 .ma-position {

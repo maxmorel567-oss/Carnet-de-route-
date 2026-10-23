@@ -2,12 +2,11 @@ import { useEffect, useRef } from 'react'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import L from '../lib/leaflet.js'
 import { ATTRIBUTION, buildStyle, webglSupported } from '../lib/mapStyle.js'
+import { isDark, onThemeChange } from '../lib/theme.js'
 
 // Secours si la carte vectorielle ne peut pas s'afficher (pas de WebGL, service injoignable)
 const OSM_TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
 const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-
-const darkQuery = window.matchMedia('(prefers-color-scheme: dark)')
 
 // Fond de carte « Établi » (vectoriel), ou tuiles OSM en secours. Renvoie une fonction de nettoyage.
 function addBaseLayer(map) {
@@ -20,9 +19,10 @@ function addBaseLayer(map) {
 
   let layer
   let cancelled = false
-  const onTheme = async (e) => {
+  let stopListening = () => {}
+  const onTheme = async (dark) => {
     try {
-      layer?.getMaplibreMap().setStyle(await buildStyle(e.matches))
+      layer?.getMaplibreMap().setStyle(await buildStyle(dark))
     } catch {
       // On garde le style déjà affiché.
     }
@@ -35,17 +35,17 @@ function addBaseLayer(map) {
     .then(async ([maplibregl, worker]) => {
       // Le « worker » décode les tuiles : Vite ne le copie que si on l'importe explicitement.
       maplibregl.setWorkerUrl(worker.default)
-      const style = await buildStyle(darkQuery.matches)
+      const style = await buildStyle(isDark())
       if (cancelled) return
       layer = L.maplibreGL({ style, attributionControl: false }).addTo(map)
       map.attributionControl.addAttribution(ATTRIBUTION)
-      darkQuery.addEventListener('change', onTheme)
+      stopListening = onThemeChange(onTheme)
     })
     .catch(() => !cancelled && fallback())
 
   return () => {
     cancelled = true
-    darkQuery.removeEventListener('change', onTheme)
+    stopListening()
   }
 }
 
