@@ -9,6 +9,7 @@ const countryNames = new Intl.DisplayNames(['fr'], { type: 'region' })
 
 export default function Catalog({ trips, photos, numbers, tags, visited = [], activeTag, onTag, needsBackup, onSelect, onClose, onExport, onImport }) {
   const [filter, setFilter] = useState('')
+  const [view, setView] = useState('liste') // 'liste' | 'frise'
   const fileInput = useRef(null)
 
   // Nombre de photos et vignette de couverture par voyage
@@ -34,6 +35,39 @@ export default function Catalog({ trips, photos, numbers, tags, visited = [], ac
       .filter((t) => !q || `${t.title} ${t.place.name} ${t.notes} ${(t.tags ?? []).join(' ')} ${(t.stops ?? []).map((s) => s.name).join(' ')}`.toLowerCase().includes(q))
       .sort((a, b) => (b.startDate || '').localeCompare(a.startDate || ''))
   }, [trips, filter, activeTag])
+
+  // Frise : voyages regroupés par année (les plus récents d'abord)
+  const years = useMemo(() => {
+    const groups = new Map()
+    list.forEach((t) => {
+      const year = t.startDate ? t.startDate.slice(0, 4) : 'Sans date'
+      groups.set(year, [...(groups.get(year) ?? []), t])
+    })
+    return [...groups]
+  }, [list])
+
+  const renderTrip = (t) => (
+    <button onClick={() => onSelect(t)} className="flex w-full gap-3 rounded-[8px] px-3 py-3 text-left hover:bg-bois">
+      {covers[t.id] ? (
+        <img src={covers[t.id].thumbUrl} alt="" className="h-12 w-12 shrink-0 rounded-[8px] object-cover" />
+      ) : (
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[8px] bg-photo-vide text-encre-muette">
+          <Icon name="pin" size={18} />
+        </span>
+      )}
+      <span className="min-w-0 flex-1">
+        <span className="block truncate font-medium">{t.title || 'Sans titre'}</span>
+        <span className="block truncate text-sm text-encre-douce">
+          {t.place.name} · {formatDates(t.startDate, t.endDate)}
+        </span>
+      </span>
+      <span className="mt-1 shrink-0 text-right font-mono text-xs leading-5 text-encre-muette">
+        N°&nbsp;{padNumber(numbers[t.id])}
+        <br />
+        {photoCount[t.id] ?? 0}&nbsp;ph.
+      </span>
+    </button>
+  )
 
   const handleImport = (e) => {
     const file = e.target.files[0]
@@ -79,6 +113,22 @@ export default function Catalog({ trips, photos, numbers, tags, visited = [], ac
             placeholder="Filtrer…"
             className="champ mt-4 bg-surface"
           />
+          <div className="mt-3 grid grid-cols-2 rounded-[8px] border border-trait bg-surface p-0.5" role="tablist" aria-label="Affichage">
+            {[
+              ['liste', 'Liste'],
+              ['frise', 'Frise'],
+            ].map(([id, label]) => (
+              <button
+                key={id}
+                role="tab"
+                aria-selected={view === id}
+                onClick={() => setView(id)}
+                className={`etiquette rounded-[6px] py-1.5 ${view === id ? 'bg-bleu text-sur-bleu' : 'text-encre-douce'}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           {tags.length > 0 && (
             <div className="mt-3 flex gap-2 overflow-x-auto pb-1" aria-label="Filtrer par étiquette">
               <Chip label="Tous" active={!activeTag} onClick={() => onTag(null)} />
@@ -95,33 +145,25 @@ export default function Catalog({ trips, photos, numbers, tags, visited = [], ac
               {trips.length ? 'Aucun voyage ne correspond.' : 'Aucun voyage pour le moment.'}
             </li>
           )}
-          {list.map((t) => (
-            <li key={t.id}>
-              <button
-                onClick={() => onSelect(t)}
-                className="flex w-full gap-3 rounded-[8px] px-3 py-3 text-left hover:bg-bois"
-              >
-                {covers[t.id] ? (
-                  <img src={covers[t.id].thumbUrl} alt="" className="h-12 w-12 shrink-0 rounded-[8px] object-cover" />
-                ) : (
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[8px] bg-photo-vide text-encre-muette">
-                    <Icon name="pin" size={18} />
-                  </span>
-                )}
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-medium">{t.title || 'Sans titre'}</span>
-                  <span className="block truncate text-sm text-encre-douce">
-                    {t.place.name} · {formatDates(t.startDate, t.endDate)}
-                  </span>
-                </span>
-                <span className="mt-1 shrink-0 text-right font-mono text-xs leading-5 text-encre-muette">
-                  N°&nbsp;{padNumber(numbers[t.id])}
-                  <br />
-                  {photoCount[t.id] ?? 0}&nbsp;ph.
-                </span>
-              </button>
-            </li>
-          ))}
+          {view === 'liste'
+            ? list.map((t) => <li key={t.id}>{renderTrip(t)}</li>)
+            : years.map(([year, items]) => (
+                <li key={year} className="mb-2">
+                  <h2 className="flex items-baseline gap-2 px-3 pt-2 pb-1">
+                    <span className="font-mono text-xl font-bold">{year}</span>
+                    <span className="etiquette text-encre-muette">
+                      {items.length}&nbsp;voyage{items.length > 1 ? 's' : ''}
+                    </span>
+                  </h2>
+                  <ol className="frise ml-6 border-l-2 border-trait">
+                    {items.map((t) => (
+                      <li key={t.id} className="relative pl-2">
+                        {renderTrip(t)}
+                      </li>
+                    ))}
+                  </ol>
+                </li>
+              ))}
         </ul>
 
         <footer className="grid grid-cols-2 gap-2 border-t border-trait p-4 [padding-bottom:max(1rem,env(safe-area-inset-bottom))]">

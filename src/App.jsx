@@ -13,6 +13,7 @@ import SearchDialog from './components/SearchDialog.jsx'
 import Catalog from './components/Catalog.jsx'
 import Icon from './components/Icon.jsx'
 import InstallBanner from './components/InstallBanner.jsx'
+import Slideshow from './components/Slideshow.jsx'
 
 // mode : null | { type: 'voyage' } (placer un voyage) | { type: 'photo', photoId } | { type: 'etape', tripId }
 const BANNER = {
@@ -34,6 +35,7 @@ export default function App() {
   const [toast, setToast] = useState('')
   const [myPosition, setMyPosition] = useState(null)
   const [activeTag, setActiveTag] = useState(null)
+  const [slideshow, setSlideshow] = useState(false)
 
   const selected = trips.find((t) => t.id === selectedId)
   const route = useMemo(() => (selected?.stops?.length ? tripStops(selected) : null), [selected])
@@ -262,6 +264,7 @@ export default function App() {
           onUpdate={(fields) => carnet.updateTrip(selected.id, fields)}
           onStopsChange={(stops) => carnet.updateTrip(selected.id, { stops })}
           onAddStop={handleAddStop}
+          onSlideshow={() => setSlideshow(true)}
           onDelete={async () => {
             await carnet.removeTrip(selected.id)
             setSelectedId(null)
@@ -293,6 +296,10 @@ export default function App() {
             await carnet.removePhoto(id)
           }}
         />
+      )}
+
+      {slideshow && selected && tripPhotos.length > 0 && (
+        <Slideshow trip={selected} photos={tripPhotos} onClose={() => setSlideshow(false)} />
       )}
 
       {searchFor && (

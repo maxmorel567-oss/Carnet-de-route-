@@ -291,3 +291,23 @@ body {
   stroke-opacity: 0.35;
   stroke-width: 1;
 }
+
+/* Diaporama : fondu enchaîné */
+.diapo { transition: opacity 600ms ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .diapo, .glisse, .tiroir, .pose-plaque { transition: none; animation: none; }
+}
+
+/* Frise : un repère bleu par voyage sur la ligne */
+.frise > li::before {
+  content: "";
+  position: absolute;
+  left: -7px;
+  top: 30px;
+  width: 12px;
+  height: 12px;
+  border-radius: 9999px;
+  background: var(--bleu);
+  border: 2px solid var(--fond);
+}

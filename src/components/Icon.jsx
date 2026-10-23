@@ -13,6 +13,8 @@ const PATHS = {
   upload: 'M12 20V9M7 14l5-5 5 5M5 4h14',
   left: 'M15 6l-6 6 6 6',
   up: 'M6 15l6-6 6 6',
+  play: 'M8 5v14l11-7z',
+  pause: 'M9 5v14M15 5v14',
   down: 'M6 9l6 6 6-6',
   right: 'M9 6l6 6-6 6',
 }
