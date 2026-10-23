@@ -1,0 +1,1 @@
+if('serviceWorker' in navigator) {window.addEventListener('load', () => {navigator.serviceWorker.register('/Carnet-de-route-/sw.js', { scope: '/Carnet-de-route-/' })})}
