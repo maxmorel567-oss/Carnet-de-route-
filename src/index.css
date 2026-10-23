@@ -282,3 +282,12 @@ body {
   font: 700 11px/1 var(--font-mono);
   box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
 }
+
+/* Pays visités */
+.pays-visite {
+  fill: var(--bleu);
+  fill-opacity: 0.12;
+  stroke: var(--bleu);
+  stroke-opacity: 0.35;
+  stroke-width: 1;
+}

@@ -137,6 +137,10 @@ carnet-de-route/
         └── Icon.jsx
 ```
 
+## Données tierces
+
+- Contours des pays : Natural Earth 1:110m (domaine public), via `world-atlas`, simplifiés dans `src/data/pays.json`. Les très petits pays (Andorre, Monaco, Malte…) n'y figurent pas : ils sont comptés mais pas coloriés.
+
 ## Limites connues
 
 - Photos HEIC sur ordinateur (Chrome, Firefox) : non lues. Sur iPhone, Safari les convertit en JPEG automatiquement.

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useCarnet } from './hooks/useCarnet.js'
-import { placeName } from './lib/geocode.js'
+import { placeInfo } from './lib/geocode.js'
 import { currentPosition } from './lib/position.js'
 import { backupDue, markBackup, saveFile } from './lib/backup.js'
 import { tripStops } from './lib/geo.js'
@@ -50,6 +50,27 @@ export default function App() {
     [photos, selectedId],
   )
 
+  // Pays visités (codes ISO) : départs + étapes de tous les voyages
+  const visited = useMemo(
+    () => [...new Set(trips.flatMap((t) => tripStops(t).map((s) => s.country?.toUpperCase()).filter(Boolean)))],
+    [trips],
+  )
+
+  // Voyages créés avant le suivi des pays : on retrouve le pays d'un lieu à la fois (1 req/s max pour Nominatim).
+  useEffect(() => {
+    if (!navigator.onLine) return
+    const trip = trips.find((t) => tripStops(t).some((s) => s.country === undefined))
+    if (!trip) return
+    const timer = setTimeout(async () => {
+      const missing = tripStops(trip).find((s) => s.country === undefined)
+      const { country } = await placeInfo(missing.lat, missing.lng)
+      if (country === undefined) return // recherche en échec (hors-ligne) : on n'insiste pas pendant cette visite
+      if (missing === trip.place) carnet.updateTrip(trip.id, { place: { ...trip.place, country } })
+      else carnet.updateTrip(trip.id, { stops: trip.stops.map((s) => (s === missing ? { ...s, country } : s)) })
+    }, 1200)
+    return () => clearTimeout(timer)
+  }, [trips]) // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (!toast) return
     const timer = setTimeout(() => setToast(''), 3500)
@@ -72,10 +93,10 @@ export default function App() {
     [focusTrip],
   )
 
-  const addStop = async (tripId, { name, lat, lng }) => {
+  const addStop = async (tripId, { name, lat, lng, country }) => {
     const trip = trips.find((t) => t.id === tripId)
     if (!trip) return
-    const stops = [...(trip.stops ?? []), { id: newId(), name, lat, lng }]
+    const stops = [...(trip.stops ?? []), { id: newId(), name, lat, lng, country }]
     await carnet.updateTrip(tripId, { stops })
     focusTrip({ ...trip, stops })
     setToast(`Étape ajoutée : ${name}`)
@@ -88,14 +109,15 @@ export default function App() {
     try {
       const pos = await currentPosition()
       setMyPosition(pos)
-      await addStop(selectedId, { name: await placeName(pos.lat, pos.lng), lat: pos.lat, lng: pos.lng })
+      await addStop(selectedId, { ...(await placeInfo(pos.lat, pos.lng)), lat: pos.lat, lng: pos.lng })
     } catch (e) {
       setToast(e.message)
     }
   }
 
-  const addTripAt = async (lat, lng, name) => {
-    const trip = await carnet.createTrip({ name: name ?? (await placeName(lat, lng)), lat, lng })
+  // info : { name, country } déjà connus (recherche) ; sinon on les demande pour ce point.
+  const addTripAt = async (lat, lng, info) => {
+    const trip = await carnet.createTrip({ ...(info ?? (await placeInfo(lat, lng))), lat, lng })
     openTrip(trip)
   }
 
@@ -104,7 +126,7 @@ export default function App() {
     try {
       const pos = await currentPosition()
       setMyPosition(pos)
-      const trip = await carnet.createTrip({ name: await placeName(pos.lat, pos.lng), lat: pos.lat, lng: pos.lng, precise: true })
+      const trip = await carnet.createTrip({ ...(await placeInfo(pos.lat, pos.lng)), lat: pos.lat, lng: pos.lng, precise: true })
       openTrip(trip, 15)
       setToast('Voyage créé à ta position. Les photos sans GPS y seront placées.')
     } catch (e) {
@@ -118,7 +140,7 @@ export default function App() {
       await addTripAt(lat, lng)
     } else if (mode?.type === 'etape') {
       setMode(null)
-      await addStop(mode.tripId, { name: await placeName(lat, lng), lat, lng })
+      await addStop(mode.tripId, { ...(await placeInfo(lat, lng)), lat, lng })
     } else if (mode?.type === 'photo') {
       setMode(null)
       await carnet.placePhoto(mode.photoId, lat, lng)
@@ -165,6 +187,7 @@ export default function App() {
         selectedId={selectedId}
         myPosition={myPosition}
         route={route}
+        visited={visited}
         focus={focus}
         onMapClick={handleMapClick}
         onSelectTrip={(id) => openTrip(trips.find((t) => t.id === id))}
@@ -279,7 +302,7 @@ export default function App() {
           onPick={async (r) => {
             setSearchFor(null)
             if (searchFor.type === 'etape') await addStop(searchFor.tripId, r)
-            else await addTripAt(r.lat, r.lng, r.name)
+            else await addTripAt(r.lat, r.lng, { name: r.name, country: r.country })
           }}
         />
       )}
@@ -291,6 +314,7 @@ export default function App() {
           numbers={numbers}
           needsBackup={needsBackup}
           tags={allTags}
+          visited={visited}
           activeTag={activeTag}
           onTag={setActiveTag}
           onSelect={openTrip}

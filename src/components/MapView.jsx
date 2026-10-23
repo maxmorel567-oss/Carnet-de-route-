@@ -123,13 +123,14 @@ const photoClusterIcon = (cluster) =>
  * Carte plein écran. Leaflet est piloté directement (hors React) pour gérer
  * le regroupement des épingles et les vignettes photo.
  */
-export default function MapView({ trips, photos, selectedId, myPosition, route, onSelectTrip, onSelectPhoto, onMapClick, focus }) {
+export default function MapView({ trips, photos, selectedId, myPosition, route, visited, onSelectTrip, onSelectPhoto, onMapClick, focus }) {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
   const clusterRef = useRef(null)
   const photoLayerRef = useRef(null)
   const positionLayerRef = useRef(null)
   const routeLayerRef = useRef(null)
+  const countriesRef = useRef(null)
   const handlers = useRef({})
   handlers.current = { onSelectTrip, onSelectPhoto, onMapClick }
 
@@ -141,6 +142,9 @@ export default function MapView({ trips, photos, selectedId, myPosition, route, 
     const removeBase = addBaseLayer(map)
     positionLayerRef.current = L.layerGroup().addTo(map)
     routeLayerRef.current = L.layerGroup().addTo(map)
+    // Pays visités : teinte légère au-dessus du fond de carte, sous les trajets et les punaises
+    map.createPane('pays').style.zIndex = 250
+    countriesRef.current = L.layerGroup().addTo(map)
 
     clusterRef.current = L.markerClusterGroup({
       showCoverageOnHover: false,
@@ -212,6 +216,29 @@ export default function MapView({ trips, photos, selectedId, myPosition, route, 
     L.circle([lat, lng], { radius: accuracy, className: 'precision', interactive: false }).addTo(layer)
     L.marker([lat, lng], { icon: positionIcon, interactive: false, zIndexOffset: -100 }).addTo(layer)
   }, [myPosition])
+
+  // Pays visités (contours chargés seulement s'il y en a)
+  const visitedKey = visited.join(',')
+  useEffect(() => {
+    const layer = countriesRef.current
+    if (!visitedKey) {
+      layer.clearLayers()
+      return
+    }
+    let cancelled = false
+    import('../data/pays.json').then(({ default: pays }) => {
+      if (cancelled) return
+      const codes = new Set(visitedKey.split(','))
+      layer.clearLayers()
+      L.geoJSON(
+        { ...pays, features: pays.features.filter((f) => codes.has(f.properties.code)) },
+        { pane: 'pays', interactive: false, className: 'pays-visite' },
+      ).addTo(layer)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [visitedKey])
 
   // Trajet du voyage ouvert : ligne pointillée + étapes numérotées (la n°1 est la punaise)
   useEffect(() => {

@@ -5,7 +5,9 @@ import { formatLastBackup } from '../lib/backup.js'
 import { Chip } from './Tags.jsx'
 
 // Menu latéral : catalogue textuel des voyages + sauvegarde.
-export default function Catalog({ trips, photos, numbers, tags, activeTag, onTag, needsBackup, onSelect, onClose, onExport, onImport }) {
+const countryNames = new Intl.DisplayNames(['fr'], { type: 'region' })
+
+export default function Catalog({ trips, photos, numbers, tags, visited = [], activeTag, onTag, needsBackup, onSelect, onClose, onExport, onImport }) {
   const [filter, setFilter] = useState('')
   const fileInput = useRef(null)
 
@@ -21,6 +23,9 @@ export default function Catalog({ trips, photos, numbers, tags, activeTag, onTag
     const coverOf = Object.fromEntries(trips.map((t) => [t.id, byId[t.coverId] ?? firsts[t.id]]))
     return { photoCount: counts, covers: coverOf }
   }, [photos, trips])
+
+  // Lieux distincts : départs + étapes
+  const places = useMemo(() => new Set(trips.flatMap((t) => [t.place, ...(t.stops ?? [])].map((s) => s.name))).size, [trips])
 
   const list = useMemo(() => {
     const q = filter.trim().toLowerCase()
@@ -50,6 +55,19 @@ export default function Catalog({ trips, photos, numbers, tags, activeTag, onTag
               <h1 className="mt-1 font-mono text-2xl leading-[30px] font-bold">
                 {trips.length}&nbsp;voyage{trips.length > 1 ? 's' : ''}
               </h1>
+              {visited.length > 0 && (
+                <p className="mt-1 text-sm text-encre-douce">
+                  <span className="font-mono font-bold text-encre">
+                    {visited.length}&nbsp;pays · {places}&nbsp;lieu{places > 1 ? 'x' : ''}
+                  </span>
+                  <span className="block">
+                    {visited
+                      .map((c) => countryNames.of(c))
+                      .sort((a, b) => a.localeCompare(b, 'fr'))
+                      .join(', ')}
+                  </span>
+                </p>
+              )}
             </div>
             <button onClick={onClose} className="rounded-[8px] p-2 text-encre-douce hover:bg-bois" aria-label="Fermer">
               <Icon name="close" />

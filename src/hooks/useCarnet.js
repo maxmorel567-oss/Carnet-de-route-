@@ -52,11 +52,11 @@ export function useCarnet() {
 
   const createTrip = useCallback(
     // precise : position GPS du téléphone (et pas un centre-ville trouvé par recherche)
-    async ({ name, lat, lng, precise = false }) => {
+    async ({ name, lat, lng, country, precise = false }) => {
       const trip = await store.saveTrip({
         id: newId(),
         title: name,
-        place: { name, lat, lng, precise },
+        place: { name, lat, lng, country, precise },
         startDate: todayIso(),
         endDate: '',
         notes: '',
