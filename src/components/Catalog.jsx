@@ -7,9 +7,9 @@ import { Chip } from './Tags.jsx'
 // Menu latéral : catalogue textuel des voyages + sauvegarde.
 const countryNames = new Intl.DisplayNames(['fr'], { type: 'region' })
 
-export default function Catalog({ trips, photos, numbers, tags, visited = [], activeTag, onTag, needsBackup, onSelect, onClose, onExport, onImport }) {
+export default function Catalog({ trips, wishes = [], photos, numbers, tags, visited = [], activeTag, onTag, needsBackup, onSelect, onClose, onExport, onImport }) {
   const [filter, setFilter] = useState('')
-  const [view, setView] = useState('liste') // 'liste' | 'frise'
+  const [view, setView] = useState('liste') // 'liste' | 'frise' | 'souhaits'
   const [favOnly, setFavOnly] = useState(false)
   const fileInput = useRef(null)
 
@@ -118,10 +118,11 @@ export default function Catalog({ trips, photos, numbers, tags, visited = [], ac
             placeholder="Filtrer…"
             className="champ mt-4 bg-surface"
           />
-          <div className="mt-3 grid grid-cols-2 rounded-[8px] border border-trait bg-surface p-0.5" role="tablist" aria-label="Affichage">
+          <div className="mt-3 grid grid-cols-3 rounded-[8px] border border-trait bg-surface p-0.5" role="tablist" aria-label="Affichage">
             {[
               ['liste', 'Liste'],
               ['frise', 'Frise'],
+              ['souhaits', `Souhaits${wishes.length ? ` (${wishes.length})` : ''}`],
             ].map(([id, label]) => (
               <button
                 key={id}
@@ -146,14 +147,32 @@ export default function Catalog({ trips, photos, numbers, tags, visited = [], ac
         </header>
 
         <ul className="flex-1 overflow-y-auto px-3 py-3">
-          {list.length === 0 && (
+          {view !== 'souhaits' && list.length === 0 && (
             <li className="px-3 py-4 text-sm text-encre-douce">
               {trips.length ? 'Aucun voyage ne correspond.' : 'Aucun voyage pour le moment.'}
             </li>
           )}
-          {view === 'liste'
-            ? list.map((t) => <li key={t.id}>{renderTrip(t)}</li>)
-            : years.map(([year, items]) => (
+          {view === 'souhaits' &&
+            (wishes.length ? (
+              wishes.map((w) => (
+                <li key={w.id}>
+                  <button onClick={() => onSelect(w)} className="flex w-full items-center gap-3 rounded-[8px] px-3 py-3 text-left hover:bg-bois">
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[8px] bg-bleu text-sur-bleu">
+                      <Icon name="heart" size={20} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-medium">{w.title}</span>
+                      <span className="block truncate text-sm text-encre-douce">{w.notes || w.place.name}</span>
+                    </span>
+                  </button>
+                </li>
+              ))
+            ) : (
+              <li className="px-3 py-4 text-sm text-encre-douce">Aucun lieu pour le moment. Ajoute-en avec + puis « Lieu à visiter ».</li>
+            ))}
+          {view === 'liste' && list.map((t) => <li key={t.id}>{renderTrip(t)}</li>)}
+          {view === 'frise' &&
+            years.map(([year, items]) => (
                 <li key={year} className="mb-2">
                   <h2 className="flex items-baseline gap-2 px-3 pt-2 pb-1">
                     <span className="font-mono text-xl font-bold">{year}</span>

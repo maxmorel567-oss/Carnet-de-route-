@@ -2,7 +2,7 @@ import { useState } from 'react'
 import Icon from './Icon.jsx'
 
 // Bouton flottant « + » avec ses deux façons d'ajouter une destination.
-export default function AddButton({ onPickOnMap, onSearch, onHere, className = '' }) {
+export default function AddButton({ onPickOnMap, onSearch, onHere, onWish, className = '' }) {
   const [open, setOpen] = useState(false)
   const choose = (action) => () => {
     setOpen(false)
@@ -24,6 +24,10 @@ export default function AddButton({ onPickOnMap, onSearch, onHere, className = '
           <button onClick={choose(onSearch)} className="option-flottante">
             <Icon name="search" size={18} className="text-bleu" />
             Rechercher une adresse
+          </button>
+          <button onClick={choose(onWish)} className="option-flottante">
+            <Icon name="heart" size={18} className="text-bleu" />
+            Lieu à visiter
           </button>
         </div>
       )}

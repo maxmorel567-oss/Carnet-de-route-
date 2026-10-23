@@ -14,6 +14,8 @@ import Catalog from './components/Catalog.jsx'
 import Icon from './components/Icon.jsx'
 import InstallBanner from './components/InstallBanner.jsx'
 import Slideshow from './components/Slideshow.jsx'
+import WishPanel from './components/WishPanel.jsx'
+import { todayIso } from './lib/format.js'
 
 // mode : null | { type: 'voyage' } (placer un voyage) | { type: 'photo', photoId } | { type: 'etape', tripId }
 const BANNER = {
@@ -24,7 +26,10 @@ const BANNER = {
 
 export default function App() {
   const carnet = useCarnet()
-  const { trips, photos, numbers } = carnet
+  const { photos, numbers } = carnet
+  // Voyages faits d'un côté, liste de souhaits de l'autre (même stockage, champ wish)
+  const trips = useMemo(() => carnet.trips.filter((t) => !t.wish), [carnet.trips])
+  const wishes = useMemo(() => carnet.trips.filter((t) => t.wish), [carnet.trips])
 
   const [selectedId, setSelectedId] = useState(null)
   const [photoId, setPhotoId] = useState(null)
@@ -37,7 +42,7 @@ export default function App() {
   const [activeTag, setActiveTag] = useState(null)
   const [slideshow, setSlideshow] = useState(false)
 
-  const selected = trips.find((t) => t.id === selectedId)
+  const selected = carnet.trips.find((t) => t.id === selectedId)
   const route = useMemo(() => (selected?.stops?.length ? tripStops(selected) : null), [selected])
   const allTags = useMemo(() => [...new Set(trips.flatMap((t) => t.tags ?? []))].sort((a, b) => a.localeCompare(b, 'fr')), [trips])
   // Filtre par étiquette : la carte ne montre que les voyages concernés et leurs photos.
@@ -118,8 +123,8 @@ export default function App() {
   }
 
   // info : { name, country } déjà connus (recherche) ; sinon on les demande pour ce point.
-  const addTripAt = async (lat, lng, info) => {
-    const trip = await carnet.createTrip({ ...(info ?? (await placeInfo(lat, lng))), lat, lng })
+  const addTripAt = async (lat, lng, info, wish = false) => {
+    const trip = await carnet.createTrip({ ...(info ?? (await placeInfo(lat, lng))), lat, lng, wish })
     openTrip(trip)
   }
 
@@ -185,6 +190,7 @@ export default function App() {
     <div className={`relative h-full overflow-hidden ${mode ? 'mode-placement' : ''}`}>
       <MapView
         trips={shownTrips}
+        wishes={wishes}
         photos={shownPhotos}
         selectedId={selectedId}
         myPosition={myPosition}
@@ -192,7 +198,7 @@ export default function App() {
         visited={visited}
         focus={focus}
         onMapClick={handleMapClick}
-        onSelectTrip={(id) => openTrip(trips.find((t) => t.id === id))}
+        onSelectTrip={(id) => openTrip(carnet.trips.find((t) => t.id === id))}
         onSelectPhoto={(p) => {
           setSelectedId(p.tripId)
           setPhotoId(p.id)
@@ -250,11 +256,29 @@ export default function App() {
             setMode({ type: 'voyage' })
           }}
           onSearch={() => setSearchFor({ type: 'voyage' })}
+          onWish={() => setSearchFor({ type: 'souhait' })}
           onHere={addTripHere}
         />
       )}
 
-      {panelVisible && (
+      {panelVisible && selected.wish && (
+        <WishPanel
+          key={selected.id}
+          wish={selected}
+          onUpdate={(fields) => carnet.updateTrip(selected.id, fields)}
+          onBecomeTrip={async () => {
+            await carnet.updateTrip(selected.id, { wish: false, startDate: todayIso(), createdAt: Date.now() })
+            setToast('Bon voyage ! Il est maintenant dans tes voyages.')
+          }}
+          onDelete={async () => {
+            await carnet.removeTrip(selected.id)
+            setSelectedId(null)
+          }}
+          onClose={() => setSelectedId(null)}
+        />
+      )}
+
+      {panelVisible && !selected.wish && (
         <TripPanel
           key={selected.id}
           trip={selected}
@@ -304,12 +328,12 @@ export default function App() {
 
       {searchFor && (
         <SearchDialog
-          title={searchFor.type === 'etape' ? 'Ajouter une étape' : 'Nouveau voyage'}
+          title={{ etape: 'Ajouter une étape', souhait: 'Lieu à visiter', voyage: 'Nouveau voyage' }[searchFor.type]}
           onClose={() => setSearchFor(null)}
           onPick={async (r) => {
             setSearchFor(null)
             if (searchFor.type === 'etape') await addStop(searchFor.tripId, r)
-            else await addTripAt(r.lat, r.lng, { name: r.name, country: r.country })
+            else await addTripAt(r.lat, r.lng, { name: r.name, country: r.country }, searchFor.type === 'souhait')
           }}
         />
       )}
@@ -321,6 +345,7 @@ export default function App() {
           numbers={numbers}
           needsBackup={needsBackup}
           tags={allTags}
+          wishes={wishes}
           visited={visited}
           activeTag={activeTag}
           onTag={setActiveTag}

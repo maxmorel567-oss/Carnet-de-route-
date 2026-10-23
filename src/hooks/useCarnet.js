@@ -46,18 +46,23 @@ export function useCarnet() {
   // Numéro de voyage (N° 001, 002…) selon l'ordre de création.
   const numbers = useMemo(() => {
     const map = {}
-    ;[...trips].sort((a, b) => a.createdAt - b.createdAt).forEach((t, i) => (map[t.id] = i + 1))
+    trips
+      .filter((t) => !t.wish)
+      .sort((a, b) => a.createdAt - b.createdAt)
+      .forEach((t, i) => (map[t.id] = i + 1))
     return map
   }, [trips])
 
   const createTrip = useCallback(
     // precise : position GPS du téléphone (et pas un centre-ville trouvé par recherche)
-    async ({ name, lat, lng, country, precise = false }) => {
+    // wish : lieu de la liste de souhaits (pas encore visité, donc sans date)
+    async ({ name, lat, lng, country, precise = false, wish = false }) => {
       const trip = await store.saveTrip({
         id: newId(),
         title: name,
         place: { name, lat, lng, country, precise },
-        startDate: todayIso(),
+        ...(wish && { wish: true }),
+        startDate: wish ? '' : todayIso(),
         endDate: '',
         notes: '',
         createdAt: Date.now(),

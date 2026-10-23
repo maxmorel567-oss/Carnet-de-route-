@@ -53,18 +53,25 @@ function addBaseLayer(map) {
 const PHOTO_ZOOM = 10
 
 // Punaise rouge inclinée, pointe en bas à gauche (= position exacte du voyage).
+// Teintes de la tête : rouge = voyage fait, bleu = lieu à visiter (liste de souhaits)
+const PIN_COLORS = {
+  rouge: { side: ['#8E0B0B', '#E21B1B', '#FF4A3D', '#A80E0E'], top: ['#FF5B4E', '#D01414'] },
+  bleu: { side: ['#122F5E', '#2459A8', '#5C8FDA', '#1B4583'], top: ['#6B9BE6', '#2459A8'] },
+}
+
 let pinCount = 0
-function pushpinSvg(width) {
+function pushpinSvg(width, color = 'rouge') {
   const id = `punaise${pinCount++}`
   const height = Math.round(width * 1.2)
+  const { side, top } = PIN_COLORS[color]
   return `<svg viewBox="0 0 40 48" width="${width}" height="${height}" aria-hidden="true">
     <defs>
       <linearGradient id="${id}c" x1="0" x2="1">
-        <stop offset="0" stop-color="#8E0B0B"/><stop offset=".45" stop-color="#E21B1B"/>
-        <stop offset=".7" stop-color="#FF4A3D"/><stop offset="1" stop-color="#A80E0E"/>
+        <stop offset="0" stop-color="${side[0]}"/><stop offset=".45" stop-color="${side[1]}"/>
+        <stop offset=".7" stop-color="${side[2]}"/><stop offset="1" stop-color="${side[3]}"/>
       </linearGradient>
       <radialGradient id="${id}t" cx=".35" cy=".35" r=".8">
-        <stop offset="0" stop-color="#FF5B4E"/><stop offset="1" stop-color="#D01414"/>
+        <stop offset="0" stop-color="${top[0]}"/><stop offset="1" stop-color="${top[1]}"/>
       </radialGradient>
       <linearGradient id="${id}a" x1="0" x2="1">
         <stop offset="0" stop-color="#8A8F96"/><stop offset=".5" stop-color="#F2F4F6"/><stop offset="1" stop-color="#9BA0A6"/>
@@ -84,12 +91,12 @@ function pushpinSvg(width) {
   </svg>`
 }
 
-const pinIcon = (active) =>
+const pinIcon = (active, color = 'rouge', width = 34) =>
   L.divIcon({
     className: '',
-    html: `<div class="epingle${active ? ' active' : ''}">${pushpinSvg(34)}</div>`,
-    iconSize: [34, 41],
-    iconAnchor: [5, 39],
+    html: `<div class="epingle${active ? ' active' : ''}">${pushpinSvg(width, color)}</div>`,
+    iconSize: [width, Math.round(width * 1.2)],
+    iconAnchor: [Math.round(width * 0.15), Math.round(width * 1.15)],
   })
 
 // Groupe de voyages : une grande punaise avec le nombre de voyages.
@@ -123,7 +130,7 @@ const photoClusterIcon = (cluster) =>
  * Carte plein écran. Leaflet est piloté directement (hors React) pour gérer
  * le regroupement des épingles et les vignettes photo.
  */
-export default function MapView({ trips, photos, selectedId, myPosition, route, visited, onSelectTrip, onSelectPhoto, onMapClick, focus }) {
+export default function MapView({ trips, wishes = [], photos, selectedId, myPosition, route, visited, onSelectTrip, onSelectPhoto, onMapClick, focus }) {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
   const clusterRef = useRef(null)
@@ -131,6 +138,7 @@ export default function MapView({ trips, photos, selectedId, myPosition, route, 
   const positionLayerRef = useRef(null)
   const routeLayerRef = useRef(null)
   const countriesRef = useRef(null)
+  const wishLayerRef = useRef(null)
   const handlers = useRef({})
   handlers.current = { onSelectTrip, onSelectPhoto, onMapClick }
 
@@ -142,6 +150,7 @@ export default function MapView({ trips, photos, selectedId, myPosition, route, 
     const removeBase = addBaseLayer(map)
     positionLayerRef.current = L.layerGroup().addTo(map)
     routeLayerRef.current = L.layerGroup().addTo(map)
+    wishLayerRef.current = L.layerGroup().addTo(map)
     // Pays visités : teinte légère au-dessus du fond de carte, sous les trajets et les punaises
     map.createPane('pays').style.zIndex = 250
     countriesRef.current = L.layerGroup().addTo(map)
@@ -195,6 +204,17 @@ export default function MapView({ trips, photos, selectedId, myPosition, route, 
       ),
     )
   }, [trips, selectedId])
+
+  // Liste de souhaits : petites punaises bleues, non regroupées
+  useEffect(() => {
+    const layer = wishLayerRef.current
+    layer.clearLayers()
+    wishes.forEach((w) =>
+      L.marker([w.place.lat, w.place.lng], { icon: pinIcon(w.id === selectedId, 'bleu', 28), title: w.title })
+        .on('click', () => handlers.current.onSelectTrip(w.id))
+        .addTo(layer),
+    )
+  }, [wishes, selectedId])
 
   // Vignettes photo (seulement celles qui ont une position)
   useEffect(() => {
