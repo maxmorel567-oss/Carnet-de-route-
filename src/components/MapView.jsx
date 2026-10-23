@@ -27,8 +27,14 @@ function addBaseLayer(map) {
       // On garde le style déjà affiché.
     }
   }
-  import('@maplibre/maplibre-gl-leaflet')
-    .then(async () => {
+  Promise.all([
+    import('maplibre-gl'),
+    import('maplibre-gl/dist/maplibre-gl-worker.mjs?url'),
+    import('@maplibre/maplibre-gl-leaflet'),
+  ])
+    .then(async ([maplibregl, worker]) => {
+      // Le « worker » décode les tuiles : Vite ne le copie que si on l'importe explicitement.
+      maplibregl.setWorkerUrl(worker.default)
       const style = await buildStyle(darkQuery.matches)
       if (cancelled) return
       layer = L.maplibreGL({ style, attributionControl: false }).addTo(map)
@@ -46,24 +52,54 @@ function addBaseLayer(map) {
 // Zoom à partir duquel les photos apparaissent en vignettes.
 const PHOTO_ZOOM = 10
 
+// Punaise rouge inclinée, pointe en bas à gauche (= position exacte du voyage).
+let pinCount = 0
+function pushpinSvg(width) {
+  const id = `punaise${pinCount++}`
+  const height = Math.round(width * 1.2)
+  return `<svg viewBox="0 0 40 48" width="${width}" height="${height}" aria-hidden="true">
+    <defs>
+      <linearGradient id="${id}c" x1="0" x2="1">
+        <stop offset="0" stop-color="#8E0B0B"/><stop offset=".45" stop-color="#E21B1B"/>
+        <stop offset=".7" stop-color="#FF4A3D"/><stop offset="1" stop-color="#A80E0E"/>
+      </linearGradient>
+      <radialGradient id="${id}t" cx=".35" cy=".35" r=".8">
+        <stop offset="0" stop-color="#FF5B4E"/><stop offset="1" stop-color="#D01414"/>
+      </radialGradient>
+      <linearGradient id="${id}a" x1="0" x2="1">
+        <stop offset="0" stop-color="#8A8F96"/><stop offset=".5" stop-color="#F2F4F6"/><stop offset="1" stop-color="#9BA0A6"/>
+      </linearGradient>
+    </defs>
+    <ellipse cx="9" cy="46" rx="7" ry="1.6" fill="#000" opacity=".18"/>
+    <g transform="translate(6 46) rotate(32)">
+      <rect x="-1.2" y="-15" width="2.4" height="15" rx="1.2" fill="url(#${id}a)"/>
+      <path d="M-11 -18 v-3.5 a11 4.5 0 0 0 22 0 v3.5 a11 4.5 0 0 1 -22 0z" fill="url(#${id}c)"/>
+      <ellipse cx="0" cy="-21.5" rx="11" ry="4.5" fill="url(#${id}t)"/>
+      <path d="M-4.5 -22 L-3.2 -33 h6.4 L4.5 -22z" fill="url(#${id}c)"/>
+      <path d="M-9 -34 v-3.5 a9 3.8 0 0 0 18 0 v3.5 a9 3.8 0 0 1 -18 0z" fill="url(#${id}c)"/>
+      <ellipse cx="0" cy="-37.5" rx="9" ry="3.8" fill="url(#${id}t)"/>
+      <ellipse cx="-4" cy="-38.3" rx="2.6" ry="1.1" fill="#fff" opacity=".75"/>
+      <ellipse cx="-6.5" cy="-22.6" rx="2.4" ry="1" fill="#fff" opacity=".6"/>
+    </g>
+  </svg>`
+}
+
 const pinIcon = (active) =>
   L.divIcon({
     className: '',
-    html: `<div class="epingle${active ? ' active' : ''}"><svg viewBox="0 0 32 40" width="32" height="40">
-      <path d="M16 1C8 1 1.5 7.3 1.5 15.2 1.5 26 16 39 16 39s14.5-13 14.5-23.8C30.5 7.3 24 1 16 1z"
-        style="fill:var(--bleu);stroke:var(--surface)" stroke-width="2"/>
-      <circle cx="16" cy="15" r="5.5" style="fill:var(--surface)"/></svg></div>`,
-    iconSize: [32, 40],
-    iconAnchor: [16, 39],
+    html: `<div class="epingle${active ? ' active' : ''}">${pushpinSvg(34)}</div>`,
+    iconSize: [34, 41],
+    iconAnchor: [5, 39],
   })
 
+// Groupe de voyages : une grande punaise avec le nombre de voyages.
 const clusterIcon = (cluster) => {
   const n = cluster.getChildCount()
-  const size = n < 10 ? 40 : n < 100 ? 48 : 56
   return L.divIcon({
     className: '',
-    html: `<div class="groupe" style="width:${size}px;height:${size}px;font-size:${n < 100 ? 16 : 14}px">${n}</div>`,
-    iconSize: [size, size],
+    html: `<div class="epingle groupe-punaise">${pushpinSvg(50)}<span>${n}</span></div>`,
+    iconSize: [50, 60],
+    iconAnchor: [8, 58],
   })
 }
 
