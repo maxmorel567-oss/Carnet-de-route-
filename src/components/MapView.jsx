@@ -1,12 +1,9 @@
 import { useEffect, useRef } from 'react'
 import L from '../lib/leaflet.js'
 
-const TILES = {
-  light: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-  dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-}
-const ATTRIBUTION =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+// Tuiles OpenStreetMap : gratuites, sans clé. Le thème sombre est obtenu en CSS (index.css).
+const TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+const ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
 
 // Zoom à partir duquel les photos apparaissent en vignettes.
 const PHOTO_ZOOM = 10
@@ -44,8 +41,6 @@ const photoIcon = (url, count = 1) =>
 const photoClusterIcon = (cluster) =>
   photoIcon(cluster.getAllChildMarkers()[0].options.thumbUrl, cluster.getChildCount())
 
-const darkQuery = window.matchMedia('(prefers-color-scheme: dark)')
-
 /**
  * Carte plein écran. Leaflet est piloté directement (hors React) pour gérer
  * le regroupement des épingles et les vignettes photo.
@@ -63,13 +58,7 @@ export default function MapView({ trips, photos, selectedId, onSelectTrip, onSel
     const map = L.map(containerRef.current, { zoomControl: false, worldCopyJump: true }).setView([30, 10], 3)
     L.control.zoom({ position: 'topright' }).addTo(map)
 
-    const tiles = L.tileLayer(darkQuery.matches ? TILES.dark : TILES.light, {
-      attribution: ATTRIBUTION,
-      subdomains: 'abcd',
-      maxZoom: 19,
-    }).addTo(map)
-    const onTheme = (e) => tiles.setUrl(e.matches ? TILES.dark : TILES.light)
-    darkQuery.addEventListener('change', onTheme)
+    L.tileLayer(TILES, { attribution: ATTRIBUTION, maxZoom: 19 }).addTo(map)
 
     clusterRef.current = L.markerClusterGroup({
       showCoverageOnHover: false,
@@ -93,10 +82,7 @@ export default function MapView({ trips, photos, selectedId, onSelectTrip, onSel
     map.on('click', (e) => handlers.current.onMapClick?.(e.latlng))
 
     mapRef.current = map
-    return () => {
-      darkQuery.removeEventListener('change', onTheme)
-      map.remove()
-    }
+    return () => map.remove()
   }, [])
 
   // Épingles de voyage

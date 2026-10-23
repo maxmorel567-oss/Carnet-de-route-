@@ -33,7 +33,7 @@ export default defineConfig({
         runtimeCaching: [
           {
             // Tuiles de carte déjà vues : consultables hors-ligne
-            urlPattern: /^https:\/\/[abcd]\.basemaps\.cartocdn\.com\//,
+            urlPattern: /^https:\/\/tile\.openstreetmap\.org\//,
             handler: 'CacheFirst',
             options: {
               cacheName: 'tuiles',

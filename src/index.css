@@ -119,6 +119,12 @@ body {
   background: var(--bois);
   font-family: var(--font-sans);
 }
+/* Fond OSM adouci ; en sombre, inversé en graphite */
+.leaflet-tile-pane { filter: saturate(0.55) contrast(0.95); }
+@media (prefers-color-scheme: dark) {
+  .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) saturate(0.4) brightness(0.85) contrast(0.9); }
+}
+
 .leaflet-control-attribution {
   background: color-mix(in srgb, var(--surface) 80%, transparent) !important;
   color: var(--encre-muette) !important;

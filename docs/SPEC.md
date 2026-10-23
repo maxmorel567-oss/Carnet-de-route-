@@ -8,7 +8,7 @@ Carnet de voyage strictement personnel, utilisable sur PC et téléphone : retro
 - **Photo** : id, tripId, image compressée (≤ 1600 px, JPEG 0,82), miniature (320 px), lat/lng, gpsSource (`exif` | `manuel` | null), takenAt.
 
 ## Carte
-- Plein écran, Leaflet, tuiles CARTO clair ou sombre selon le thème du système.
+- Plein écran, Leaflet, tuiles OpenStreetMap, adoucies en clair et inversées en sombre (filtre CSS).
 - Voyages regroupés de loin (pastille bleue avec le nombre). Un clic sur la pastille zoome, et les voyages au même endroit s'éventaillent au zoom maximal.
 - À partir du zoom 10 : vignettes des photos géolocalisées, elles aussi regroupées (vignette + nombre).
 - Clic sur une épingle : ouvre la fiche. Clic sur une vignette : ouvre la photo. Clic dans le vide : ferme la fiche.
